@@ -14,7 +14,7 @@ Mientras el PR que lo agrega esté abierto, cualquiera de los dos puede proponer
 | Acceso a Neon | Paquete `pg` (node-postgres), **siempre con consultas parametrizadas** (`$1, $2…`) | Evita la inyección SQL (guía §4) |
 | Motor Prolog | Paquete `swipl-wasm` dentro del backend (opción **A** de la guía) | No hay que instalar SWI-Prolog en el servidor; funciona en cualquier hosting de Node |
 | Front end | React + Vite | `.env.example` ya usa el puerto 5173 de Vite; React facilita el estado de «nueva factura» |
-| Gráfico | Chart.js | Sencillo y suficiente para el reporte |
+| Gráfico | HTML y CSS, sin librería | Un `<canvas>` (como el de Chart.js) no lo puede leer un lector de pantalla; con HTML cada barra lleva su nombre y su valor como texto, y no se agrega otra dependencia |
 | Despliegue | Front en GitHub Pages, backend en un servicio gratuito de Node (por ejemplo, Render) | Por confirmar cuando el backend esté listo |
 
 Límites conocidos de la opción A, para el informe: el primer arranque de `swipl-wasm` tarda unos segundos y el paquete pesa varios MB. Hay que medirlo y comentarlo en la presentación.
