@@ -130,6 +130,7 @@ El motor es el único lugar donde se calculan descuentos, IVA, validaciones y pr
 | `cantidad_invalida` | Cantidad ≤ 0 | «La cantidad de mouse debe ser mayor que cero.» |
 | `stock_insuficiente` | Stock menor que lo pedido (en un kit: algún componente) | «No hay suficiente stock de laptop: se pidieron 20 y solo hay 15.» |
 | `credito_no_permitido` | Crédito para un consumidor final o un cliente regular | «comercial_luna es un cliente de nivel regular y no puede comprar a crédito.» |
+| `producto_inexistente` | Una línea trae un código que no es producto ni kit. La tabla `lineas` no tiene llave foránea, así que el motor también lo revisa | «El producto p99 no existe en el catálogo.» |
 
 Una factura puede traer **varios errores a la vez**. El motor los devuelve todos, no solo el primero.
 
@@ -148,6 +149,7 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 - En producción los datos vienen de Neon, no de `facturacion_datos.pl`. El motor carga **solo** `facturacion_reglas.pl`, declara los hechos como `dynamic` y, en cada llamada, hace `retractall` y luego `assertz` con lo que recibe.
 - Hay que sacar el `ensure_loaded(facturacion_datos)` del archivo de reglas. Para la consola y las pruebas se carga aparte.
 - **Los datos nunca se pegan como texto dentro de una consulta Prolog.** Se convierten a términos con comillas seguras (por ejemplo, `format("~q", ...)` en Prolog o un escape equivalente en JS). Es el equivalente Prolog de la inyección SQL.
+- En Prolog, todo el resultado sale de `resultado_factura(Id, resultado(Estado, Subtotal, Iva, Total, Lineas, ConsumoStock, Errores))`. El módulo JS lo traduce al JSON de la §3.1: `null` pasa a `null`, y un `productoCod` igual a `ninguno` se omite.
 - `swipl-wasm` atiende una consulta a la vez. Las llamadas a `calcularFactura` se encolan para que dos facturas no mezclen sus hechos.
 
 ## 4. Contrato de la API
