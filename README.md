@@ -44,11 +44,13 @@ _Por definir._
 
 ## Endpoints de la API
 
+El formato exacto de cada petición y respuesta está en [docs/CONTRATO.md](docs/CONTRATO.md).
+
 | Método | Ruta | Descripción | Respuestas |
 |---|---|---|---|
 | GET | `/api/productos` | Lista los productos | 200 |
 | GET | `/api/clientes` | Lista los clientes | 200 |
-| GET | `/api/facturas` | Lista las facturas | 200 |
+| GET | `/api/facturas?estado=&cliente=` | Lista las facturas (filtros opcionales) | 200 |
 | GET | `/api/facturas/{id}` | Detalle de una factura con sus líneas | 200, 404 |
 | POST | `/api/facturas` | Crea una factura con sus líneas | 201, 400 |
 | POST | `/api/facturas/{id}/emitir` | Calcula la factura con el motor Prolog y guarda el resultado | 200, 404, 409 |
