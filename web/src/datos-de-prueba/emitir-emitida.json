@@ -1,0 +1,57 @@
+{
+  "id": 2,
+  "consumoStock": [
+    {
+      "cantidad": 10,
+      "productoCod": "p1"
+    },
+    {
+      "cantidad": 2,
+      "productoCod": "p3"
+    },
+    {
+      "cantidad": 1,
+      "productoCod": "p6"
+    }
+  ],
+  "errores": [],
+  "estado": "emitida",
+  "iva": 174,
+  "lineas": [
+    {
+      "base": 11400,
+      "cantidad": 10,
+      "categoria": "canasta",
+      "descCliente": 0,
+      "descVolumen": 5,
+      "iva": 114,
+      "precioUnitario": 1200,
+      "productoCod": "p1",
+      "tarifaIva": 1
+    },
+    {
+      "base": 3000,
+      "cantidad": 2,
+      "categoria": "medicamento",
+      "descCliente": 0,
+      "descVolumen": 0,
+      "iva": 60,
+      "precioUnitario": 1500,
+      "productoCod": "p3",
+      "tarifaIva": 2
+    },
+    {
+      "base": 12000,
+      "cantidad": 1,
+      "categoria": "exento",
+      "descCliente": 0,
+      "descVolumen": 0,
+      "iva": 0,
+      "precioUnitario": 12000,
+      "productoCod": "p6",
+      "tarifaIva": 0
+    }
+  ],
+  "subtotal": 26400,
+  "total": 26574
+}
