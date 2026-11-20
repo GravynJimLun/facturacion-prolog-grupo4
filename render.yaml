@@ -1,0 +1,31 @@
+# Publicación del backend en Render (https://render.com), plan gratuito.
+# Render lee este archivo al crear un "Blueprint" desde el repositorio.
+# Los pasos están en docs/DESPLIEGUE.md.
+services:
+  - type: web
+    name: facturacion-api
+    runtime: node
+    plan: free
+    # Se construye desde la raíz del repositorio (y no desde api/) porque
+    # el motor necesita los archivos de reglas/.
+    buildCommand: cd api && npm ci
+    startCommand: cd api && npm start
+    healthCheckPath: /api/salud
+    autoDeploy: true
+    # Solo se vuelve a publicar cuando cambian el backend o las reglas.
+    buildFilter:
+      paths:
+        - api/**
+        - reglas/**
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: MOTOR
+        value: real
+      # Origen del front end publicado en GitHub Pages (sin la ruta).
+      - key: CORS_ORIGIN
+        value: https://gravynjimlun.github.io
+      # Cadena de conexión de Neon. sync: false = Render la pide al crear el
+      # servicio y la guarda como secreto. NUNCA se escribe en este archivo.
+      - key: DATABASE_URL
+        sync: false
