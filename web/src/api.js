@@ -3,8 +3,7 @@
 // en un solo lugar y siempre tienen un mensaje amable.
 import productos from './datos-de-prueba/productos.json';
 import clientes from './datos-de-prueba/clientes.json';
-import facturas from './datos-de-prueba/facturas.json';
-import factura2 from './datos-de-prueba/factura-2.json';
+import facturasDetalle from './datos-de-prueba/facturas-detalle.json';
 import emitirEmitida from './datos-de-prueba/emitir-emitida.json';
 import emitirRechazada from './datos-de-prueba/emitir-rechazada.json';
 import reportes from './datos-de-prueba/reportes.json';
@@ -72,28 +71,94 @@ const apiReal = {
 // Responde con los JSON de src/datos-de-prueba/ (mismo formato del
 // contrato §4) y espera un poco, para que se vea el indicador de carga.
 const esperar = (valor) => new Promise((ok) => setTimeout(() => ok(structuredClone(valor)), 400));
+const fallar = (error) => new Promise((_, no) => setTimeout(() => no(error), 400));
+
+// Las facturas viven en memoria mientras la página está abierta: crear y
+// emitir las cambian, igual que el backend real. Al recargar se vuelve a
+// los 6 ejemplos (sus números son los de docs/VERIFICACION.md).
+const memoria = new Map(facturasDetalle.map((f) => [f.id, structuredClone(f)]));
+const nombreProducto = (cod) => productos.find((p) => p.cod === cod)?.nombre ?? cod;
+const noExiste = (id) => new ErrorApi(`La factura ${id} no existe.`, { status: 404 });
+
+const resumenFactura = (f) => ({
+  id: f.id,
+  clienteId: f.cliente.id,
+  clienteNombre: f.cliente.nombre,
+  formaPago: f.formaPago,
+  estado: f.estado,
+  subtotal: f.subtotal,
+  iva: f.iva,
+  total: f.total,
+  creadaEn: f.creadaEn,
+});
 
 const apiDePrueba = {
   productos: () => esperar(productos),
   clientes: () => esperar(clientes),
   facturas: ({ estado, cliente } = {}) =>
-    esperar(facturas.filter((f) => (!estado || f.estado === estado) && (!cliente || f.clienteId === cliente))),
-  factura: (id) => esperar({ ...factura2, id: Number(id) }),
-  crearFactura: ({ clienteId, formaPago, lineas }) =>
-    esperar({
-      ...factura2,
-      id: 99,
-      estado: 'pendiente',
+    esperar(
+      [...memoria.values()]
+        .map(resumenFactura)
+        .filter((f) => (!estado || f.estado === estado) && (!cliente || f.clienteId === cliente)),
+    ),
+  factura: (id) => (memoria.has(Number(id)) ? esperar(memoria.get(Number(id))) : fallar(noExiste(id))),
+  crearFactura: ({ clienteId, formaPago, lineas }) => {
+    const nueva = {
+      id: Math.max(...memoria.keys()) + 1,
       formaPago,
+      estado: 'pendiente',
       subtotal: null,
       iva: null,
       total: null,
+      creadaEn: new Date().toISOString(),
       cliente: clientes.find((c) => c.id === clienteId),
-      lineas: lineas.map((l) => ({ ...l, productoNombre: l.productoCod })),
-    }),
-  // La factura 5 sale rechazada; las demás, emitidas.
-  emitirFactura: (id) =>
-    esperar(Number(id) === 5 ? emitirRechazada : { ...emitirEmitida, id: Number(id) }),
+      lineas: lineas.map(({ productoCod, cantidad }) => ({
+        productoCod,
+        productoNombre: nombreProducto(productoCod),
+        cantidad,
+        categoria: null,
+        precioUnitario: null,
+        descVolumen: null,
+        descCliente: null,
+        base: null,
+        tarifaIva: null,
+        iva: null,
+      })),
+      errores: [],
+    };
+    memoria.set(nueva.id, nueva);
+    return esperar(nueva);
+  },
+  // Igual que el backend: 404 si no existe, 409 si ya está emitida. Una
+  // rechazada de los ejemplos se vuelve a rechazar por lo mismo; una factura
+  // nueva sale emitida con los montos de emitir-emitida.json (en modo de
+  // prueba no hay motor que calcule).
+  emitirFactura: (id) => {
+    const f = memoria.get(Number(id));
+    if (!f) return fallar(noExiste(id));
+    if (f.estado === 'emitida') {
+      return fallar(new ErrorApi(`La factura ${id} ya fue emitida.`, { status: 409 }));
+    }
+    let resultado;
+    if (f.estado === 'rechazada') resultado = { ...emitirRechazada, errores: f.errores };
+    else if (f.lineas.length === 0) {
+      resultado = {
+        ...emitirRechazada,
+        errores: [{ codigo: 'factura_sin_lineas', mensaje: 'La factura no tiene líneas.' }],
+      };
+    } else resultado = emitirEmitida;
+    Object.assign(f, {
+      estado: resultado.estado,
+      subtotal: resultado.subtotal,
+      iva: resultado.iva,
+      total: resultado.total,
+      errores: resultado.errores,
+    });
+    if (resultado.estado === 'emitida') {
+      f.lineas = resultado.lineas.map((l) => ({ ...l, productoNombre: nombreProducto(l.productoCod) }));
+    }
+    return esperar({ ...resultado, id: f.id });
+  },
   reportes: () => esperar(reportes),
 };
 

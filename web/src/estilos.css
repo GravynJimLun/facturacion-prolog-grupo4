@@ -168,3 +168,87 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border: 2px solid var(
   .tabla-apilable td::before { content: attr(data-titulo); font-weight: 700; text-align: left; }
   .tabla-apilable .num { text-align: right; }
 }
+
+/* ======================================================================
+   Detalle, emitir y reportes (#21, #22, #24)
+   ====================================================================== */
+h2 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem; }
+.bloque { display: block; }
+.titulo-con-estado { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.5rem 0 1rem; }
+.titulo-con-estado h1 { margin: 0; }
+[tabindex='-1']:focus { outline: none; }
+[tabindex='-1']:focus-visible { outline: 3px solid #f2a900; outline-offset: 2px; }
+
+/* Un enlace que se ve como botón (por ejemplo, «Emitir factura») */
+a.boton { display: inline-flex; align-items: center; text-decoration: none; }
+
+.aviso-info { background: #e4ecf7; color: var(--primario-oscuro); border: 1px solid var(--primario); }
+.aviso-info p { margin: 0.25rem 0; }
+
+/* Datos generales de la factura */
+.ficha {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem 1.5rem;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  padding: 0.75rem 1rem; margin: 0 0 1rem;
+}
+.ficha dt { color: var(--texto-suave); font-size: 0.875rem; }
+.ficha dd { margin: 0; font-weight: 600; }
+
+/* Subtotal, IVA y total */
+.totales {
+  margin: 1rem 0 1.5rem auto; max-width: 340px; background: var(--superficie);
+  border: 1px solid var(--borde); border-radius: var(--radio); padding: 0.5rem 1rem;
+}
+.totales div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; }
+.totales dt { color: var(--texto-suave); }
+.totales dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.totales-total { border-top: 1px solid var(--borde); margin-top: 0.25rem; }
+.totales-total dt { color: var(--texto); font-weight: 700; }
+.totales-total dd { font-size: 1.25rem; font-weight: 700; }
+.resultado .totales { margin-left: 0; }
+
+/* Tarjetas de los reportes */
+.tarjetas {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem; margin: 0 0 1.5rem;
+}
+.tarjeta {
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio);
+  padding: 0.75rem 1rem;
+}
+.tarjeta dt { color: var(--texto-suave); font-size: 0.9rem; font-weight: 600; }
+.tarjeta dd { margin: 0.25rem 0 0; }
+.tarjeta-valor { display: block; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tarjeta-nota { display: block; color: var(--texto-suave); font-size: 0.875rem; }
+
+/* Gráfico de barras horizontales: barras delgadas, ancladas a la línea
+   base de la izquierda y con el extremo redondeado. El valor va escrito
+   al lado en color de texto, no en el color de la barra. */
+.grafico {
+  margin: 0 0 1rem; background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: var(--radio); padding: 1rem;
+}
+.grafico-titulo { font-weight: 700; margin-bottom: 0.75rem; }
+.barras { list-style: none; margin: 0; padding: 0; }
+.barra-fila {
+  display: grid; grid-template-columns: minmax(6.5rem, 11rem) 1fr 3.5rem;
+  align-items: center; gap: 0.75rem; padding: 3px 0;
+}
+.barra-fila:hover { background: var(--fondo); }
+.barra-nombre { overflow-wrap: anywhere; }
+.barra-pista { display: block; border-left: 1px solid #8a94a1; padding: 2px 0; }
+.barra { display: block; height: 18px; min-width: 2px; background: var(--primario); border-radius: 0 4px 4px 0; }
+.barra-valor { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.ver-tabla { margin-top: 1rem; }
+.ver-tabla summary { cursor: pointer; color: var(--primario); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.ver-tabla .tabla { margin-top: 0.5rem; }
+
+@media (max-width: 700px) {
+  .barra-fila { grid-template-columns: minmax(5.5rem, 8rem) 1fr 3rem; gap: 0.5rem; }
+  .totales { margin-left: 0; max-width: none; }
+}
+
+/* Modo de alto contraste de Windows: las barras se ven aunque se quiten los colores */
+@media (forced-colors: active) {
+  .barra { background: CanvasText; }
+}

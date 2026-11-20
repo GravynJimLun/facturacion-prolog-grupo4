@@ -1,0 +1,253 @@
+[
+  {
+    "id": 1,
+    "formaPago": "contado",
+    "estado": "emitida",
+    "subtotal": 964710,
+    "iva": 125412,
+    "total": 1090122,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c1",
+      "nombre": "tienda_sol",
+      "tipo": "contribuyente",
+      "nivel": "oro"
+    },
+    "lineas": [
+      {
+        "productoCod": "p2",
+        "productoNombre": "laptop",
+        "cantidad": 2,
+        "categoria": "general",
+        "precioUnitario": 450000,
+        "descVolumen": 0,
+        "descCliente": 10,
+        "base": 810000,
+        "tarifaIva": 13,
+        "iva": 105300
+      },
+      {
+        "productoCod": "p4",
+        "productoNombre": "mouse",
+        "cantidad": 12,
+        "categoria": "general",
+        "precioUnitario": 8500,
+        "descVolumen": 5,
+        "descCliente": 10,
+        "base": 87210,
+        "tarifaIva": 13,
+        "iva": 11337
+      },
+      {
+        "productoCod": "p5",
+        "productoNombre": "hora_soporte",
+        "cantidad": 3,
+        "categoria": "general",
+        "precioUnitario": 25000,
+        "descVolumen": 0,
+        "descCliente": 10,
+        "base": 67500,
+        "tarifaIva": 13,
+        "iva": 8775
+      }
+    ],
+    "errores": []
+  },
+  {
+    "id": 2,
+    "formaPago": "contado",
+    "estado": "emitida",
+    "subtotal": 26400,
+    "iva": 174,
+    "total": 26574,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c2",
+      "nombre": "juan_perez",
+      "tipo": "consumidor_final",
+      "nivel": "regular"
+    },
+    "lineas": [
+      {
+        "productoCod": "p1",
+        "productoNombre": "arroz_1kg",
+        "cantidad": 10,
+        "categoria": "canasta",
+        "precioUnitario": 1200,
+        "descVolumen": 5,
+        "descCliente": 0,
+        "base": 11400,
+        "tarifaIva": 1,
+        "iva": 114
+      },
+      {
+        "productoCod": "p3",
+        "productoNombre": "paracetamol",
+        "cantidad": 2,
+        "categoria": "medicamento",
+        "precioUnitario": 1500,
+        "descVolumen": 0,
+        "descCliente": 0,
+        "base": 3000,
+        "tarifaIva": 2,
+        "iva": 60
+      },
+      {
+        "productoCod": "p6",
+        "productoNombre": "libro_texto",
+        "cantidad": 1,
+        "categoria": "exento",
+        "precioUnitario": 12000,
+        "descVolumen": 0,
+        "descCliente": 0,
+        "base": 12000,
+        "tarifaIva": 0,
+        "iva": 0
+      }
+    ],
+    "errores": []
+  },
+  {
+    "id": 3,
+    "formaPago": "contado",
+    "estado": "emitida",
+    "subtotal": 589950,
+    "iva": 0,
+    "total": 589950,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c3",
+      "nombre": "fundacion_esperanza",
+      "tipo": "exonerado",
+      "nivel": "plata"
+    },
+    "lineas": [
+      {
+        "productoCod": "p2",
+        "productoNombre": "laptop",
+        "cantidad": 1,
+        "categoria": "general",
+        "precioUnitario": 450000,
+        "descVolumen": 0,
+        "descCliente": 5,
+        "base": 427500,
+        "tarifaIva": 0,
+        "iva": 0
+      },
+      {
+        "productoCod": "p7",
+        "productoNombre": "teclado",
+        "cantidad": 10,
+        "categoria": "general",
+        "precioUnitario": 18000,
+        "descVolumen": 5,
+        "descCliente": 5,
+        "base": 162450,
+        "tarifaIva": 0,
+        "iva": 0
+      }
+    ],
+    "errores": []
+  },
+  {
+    "id": 4,
+    "formaPago": "credito",
+    "estado": "rechazada",
+    "subtotal": null,
+    "iva": null,
+    "total": null,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c4",
+      "nombre": "comercial_luna",
+      "tipo": "contribuyente",
+      "nivel": "regular"
+    },
+    "lineas": [
+      {
+        "productoCod": "p4",
+        "productoNombre": "mouse",
+        "cantidad": 5,
+        "categoria": null,
+        "precioUnitario": null,
+        "descVolumen": null,
+        "descCliente": null,
+        "base": null,
+        "tarifaIva": null,
+        "iva": null
+      }
+    ],
+    "errores": [
+      {
+        "codigo": "credito_no_permitido",
+        "mensaje": "comercial_luna es un cliente de nivel regular y no puede comprar a crédito."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "formaPago": "contado",
+    "estado": "rechazada",
+    "subtotal": null,
+    "iva": null,
+    "total": null,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c2",
+      "nombre": "juan_perez",
+      "tipo": "consumidor_final",
+      "nivel": "regular"
+    },
+    "lineas": [
+      {
+        "productoCod": "p2",
+        "productoNombre": "laptop",
+        "cantidad": 20,
+        "categoria": null,
+        "precioUnitario": null,
+        "descVolumen": null,
+        "descCliente": null,
+        "base": null,
+        "tarifaIva": null,
+        "iva": null
+      }
+    ],
+    "errores": [
+      {
+        "codigo": "stock_insuficiente",
+        "productoCod": "p2",
+        "mensaje": "No hay suficiente stock de laptop: se pidieron 20 y solo hay 15."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "formaPago": "credito",
+    "estado": "emitida",
+    "subtotal": 408412,
+    "iva": 53094,
+    "total": 461506,
+    "creadaEn": "2026-11-20T03:04:05.799Z",
+    "cliente": {
+      "id": "c1",
+      "nombre": "tienda_sol",
+      "tipo": "contribuyente",
+      "nivel": "oro"
+    },
+    "lineas": [
+      {
+        "productoCod": "k2",
+        "productoNombre": "kit_oficina_con_soporte",
+        "cantidad": 1,
+        "categoria": "general",
+        "precioUnitario": 453791.25,
+        "descVolumen": 0,
+        "descCliente": 10,
+        "base": 408412,
+        "tarifaIva": 13,
+        "iva": 53094
+      }
+    ],
+    "errores": []
+  }
+]

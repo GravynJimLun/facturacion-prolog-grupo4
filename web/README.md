@@ -32,7 +32,9 @@ Por defecto llama al backend en `http://localhost:3000`. Para cambiarlo, copie `
 | `#/facturas/{id}` | Detalle línea por línea | `paginas/Detalle.jsx` | #22 | Gravyn |
 | `#/reportes` | Reportes con gráfico | `paginas/Reportes.jsx` | #24 | Gravyn |
 
-Al guardar una factura nueva, la app lleva a `#/facturas/{id}/emitir`. Las pantallas de Gravyn por ahora solo tienen el título.
+Al guardar una factura nueva, la app lleva a `#/facturas/{id}/emitir`.
+
+En modo de prueba (`VITE_DATOS_DE_PRUEBA=true`), las facturas viven en memoria: se pueden crear y emitir, y al recargar se vuelve a los 6 ejemplos de `datos-de-prueba/facturas-detalle.json`. Como no hay motor, una factura nueva sale emitida con los montos de ejemplo de la factura 2.
 
 ## Estructura
 
