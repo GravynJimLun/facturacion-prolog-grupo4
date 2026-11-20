@@ -108,8 +108,19 @@ Todos los errores tienen el mismo formato: `{ "error": "Datos inválidos", "deta
 
 | Nombre | Usuario de GitHub | Rol principal |
 |---|---|---|
-| | | |
+| _(nombre completo)_ | [GravynJimLun](https://github.com/GravynJimLun) | Motor de reglas en Prolog, pruebas plunit, integración continua, módulo del motor para Node y pantallas de emitir, detalle y reportes |
+| _(nombre completo)_ | [ArmandoR05](https://github.com/ArmandoR05) | Backend (API y Neon), colección de Postman y pantallas de catálogo, nueva factura e historial |
+
+El reparto completo por carpeta está en [docs/CONTRATO.md](docs/CONTRATO.md) §2, y la arquitectura en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
 
 ## Capturas
 
-_Pendiente._
+| Catálogo | Nueva factura |
+|---|---|
+| ![Catálogo con productos y kits](docs/capturas/catalogo.png) | ![Formulario de nueva factura con subtotal estimado](docs/capturas/nueva-factura.png) |
+
+| Historial con filtros | Historial en el celular |
+|---|---|
+| ![Historial de facturas emitidas, rechazadas y pendientes](docs/capturas/historial.png) | ![Historial filtrado por rechazadas en un celular](docs/capturas/historial-celular.png) |
+
+_Faltan las capturas de emitir, detalle y reportes (issues #21, #22 y #24)._
