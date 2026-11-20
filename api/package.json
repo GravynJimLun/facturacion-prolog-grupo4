@@ -1,0 +1,16 @@
+{
+  "name": "facturacion-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend del sistema de facturación: conecta el front end con Neon y con el motor Prolog",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "swipl-wasm": "8.2.6"
+  }
+}
