@@ -29,7 +29,8 @@ Es un sistema de facturación con cuatro piezas:
 ### 1. Base de datos (Neon)
 1. Crear un proyecto en [Neon](https://neon.tech).
 2. Abrir **SQL Editor**, pegar `sql/facturacion_neon.sql` y pulsar **Run**.
-3. Copiar `.env.example` como `.env` y poner ahí la cadena de conexión. **El archivo `.env` nunca se sube a GitHub.**
+3. Después, en el mismo editor, correr `sql/002_detalle_lineas.sql`. Agrega las columnas donde se guarda el detalle calculado de cada línea.
+4. Copiar `.env.example` como `.env` y poner ahí la cadena de conexión. **El archivo `.env` nunca se sube a GitHub.**
 
 ### 2. Motor de reglas (Prolog)
 Requiere [SWI-Prolog](https://www.swi-prolog.org/download/stable).
@@ -47,7 +48,15 @@ swipl -g run_tests -t halt reglas/pruebas.pl
 `facturacion_reglas.pl` solo tiene las reglas; `facturacion_datos.pl` solo tiene los datos de ejemplo. Las pruebas corren solas en cada Pull Request con GitHub Actions. La verificación a mano de las facturas está en [docs/VERIFICACION.md](docs/VERIFICACION.md).
 
 ### 3. Backend
-_Por definir: tecnología, instalación y comando para arrancarlo._
+Requiere Node.js 22 o superior. Con el `.env` listo en la raíz del repositorio:
+
+```bash
+cd api
+npm install
+npm start        # http://localhost:3000/api/salud
+```
+
+Las variables de entorno y la estructura del código están en [api/README.md](api/README.md).
 
 ### 4. Front end
 _Por definir._
