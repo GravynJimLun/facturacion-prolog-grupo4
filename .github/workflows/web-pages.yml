@@ -1,0 +1,60 @@
+# Publica el front end (web/) en GitHub Pages cada vez que cambia en main.
+#
+# Configuración (una sola vez, la hace el dueño del repositorio):
+#   1. Settings -> Pages -> Source: "GitHub Actions".
+#   2. Settings -> Secrets and variables -> Actions -> pestaña Variables:
+#      VITE_API_URL = dirección pública del backend (por ejemplo, https://facturacion-api.onrender.com).
+#      Mientras no exista, el sitio se publica en modo de prueba, con los datos de web/src/datos-de-prueba/.
+name: Publicar front end
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/web-pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Construir
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_DATOS_DE_PRUEBA: ${{ vars.VITE_API_URL == '' && 'true' || 'false' }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
