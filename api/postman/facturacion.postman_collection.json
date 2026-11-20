@@ -1,0 +1,1108 @@
+{
+  "info": {
+    "_postman_id": "9cc2d1a0-ec47-4d2a-a540-1fe2dcf64c64",
+    "name": "Facturación Prolog · Grupo 4",
+    "description": "Pruebas de la API (guía §4). Correr en orden con el Collection Runner, con el backend en MOTOR=real.\nLas peticiones de la carpeta 3 dependen de las facturas que crea la carpeta 2.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Consultas",
+      "item": [
+        {
+          "name": "Salud del servidor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"El servidor responde ok\", () => pm.expect(pm.response.json().estado).to.eql(\"ok\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salud",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "salud"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Productos y kits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const lista = pm.response.json();",
+                  "pm.test(\"Trae los 7 productos y los 2 kits\", () => {",
+                  "    pm.expect(lista.filter(p => p.tipo === \"producto\")).to.have.lengthOf(7);",
+                  "    pm.expect(lista.filter(p => p.tipo === \"kit\")).to.have.lengthOf(2);",
+                  "});",
+                  "pm.test(\"Cada producto tiene categoría, precio y stock\", () => {",
+                  "    lista.filter(p => p.tipo === \"producto\").forEach(p => {",
+                  "        pm.expect(p).to.include.keys(\"cod\", \"nombre\", \"categoria\", \"precio\", \"stock\");",
+                  "    });",
+                  "});",
+                  "pm.test(\"El kit k2 incluye al kit k1 (kits recursivos)\", () => {",
+                  "    const k2 = lista.find(p => p.cod === \"k2\");",
+                  "    pm.expect(k2.componentes).to.include(\"k1\");",
+                  "    pm.expect(k2.categoria).to.eql(\"general\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Clientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae los 4 clientes con tipo y nivel\", () => {",
+                  "    const lista = pm.response.json();",
+                  "    pm.expect(lista).to.have.lengthOf(4);",
+                  "    lista.forEach(c => pm.expect(c).to.include.keys(\"id\", \"nombre\", \"tipo\", \"nivel\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Facturas (todas)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es una lista con las facturas de ejemplo\", () => {",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\").with.length.at.least(6);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Facturas filtradas por cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Todas son del cliente c2\", () => {",
+                  "    pm.response.json().forEach(f => pm.expect(f.clienteId).to.eql(\"c2\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas?cliente=c2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ],
+              "query": [
+                {
+                  "key": "cliente",
+                  "value": "c2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Facturas con estado inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Explica cuáles estados son válidos\", () => {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.error).to.eql(\"Datos inválidos\");",
+                  "    pm.expect(r.detalles[0]).to.include(\"pendiente\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas?estado=pagada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "pagada"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle de la factura 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const f = pm.response.json();",
+                  "pm.test(\"Trae el cliente y sus 3 líneas\", () => {",
+                  "    pm.expect(f.cliente.id).to.eql(\"c2\");",
+                  "    pm.expect(f.lineas).to.have.lengthOf(3);",
+                  "    pm.expect(f.lineas[0]).to.include.keys(\"productoCod\", \"productoNombre\", \"cantidad\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Factura que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Mensaje de error claro\", () => pm.expect(pm.response.json().error).to.include(\"999999\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Id de factura inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "abc"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ruta que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Respuesta con el formato { error }\", () => pm.expect(pm.response.json()).to.have.property(\"error\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/no-existe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "no-existe"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Crear facturas",
+      "item": [
+        {
+          "name": "Crear factura como la 2 (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "const f = pm.response.json();",
+                  "pm.test(\"Queda pendiente, sin totales\", () => {",
+                  "    pm.expect(f.estado).to.eql(\"pendiente\");",
+                  "    pm.expect(f.total).to.eql(null);",
+                  "});",
+                  "pm.test(\"Cabecera Location apunta a la factura\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.eql(\"/api/facturas/\" + f.id);",
+                  "});",
+                  "pm.collectionVariables.set(\"idControl\", f.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c2\",\n  \"formaPago\": \"contado\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p1\",\n      \"cantidad\": 10\n    },\n    {\n      \"productoCod\": \"p3\",\n      \"cantidad\": 2\n    },\n    {\n      \"productoCod\": \"p6\",\n      \"cantidad\": 1\n    }\n  ]\n}"
+            },
+            "description": "Misma compra que la factura 2 de ejemplo. Al emitirla debe dar los valores de control de la guía."
+          }
+        },
+        {
+          "name": "Crear factura de cliente exonerado (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"idExonerado\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c3\",\n  \"formaPago\": \"credito\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p1\",\n      \"cantidad\": 10\n    }\n  ]\n}"
+            },
+            "description": "fundacion_esperanza (exonerado, plata) a crédito: se permite y no paga IVA."
+          }
+        },
+        {
+          "name": "Crear factura a crédito de consumidor final (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created (el crédito lo valida el motor al emitir)\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"idCredito\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c2\",\n  \"formaPago\": \"credito\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p4\",\n      \"cantidad\": 1\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear factura sin líneas (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created (la factura vacía la rechaza el motor)\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"idVacia\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c1\",\n  \"formaPago\": \"contado\",\n  \"lineas\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear factura sin stock suficiente (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created (el stock lo valida el motor)\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"idSinStock\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c1\",\n  \"formaPago\": \"contado\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p2\",\n      \"cantidad\": 5000\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear con datos inválidos (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Explica cada problema\", () => {",
+                  "    const d = pm.response.json().detalles;",
+                  "    pm.expect(d.some(t => t.includes(\"formaPago\"))).to.be.true;",
+                  "    pm.expect(d.some(t => t.includes(\"cantidad de la línea 1\"))).to.be.true;",
+                  "    pm.expect(d.some(t => t.includes(\"cantidad de la línea 2\"))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c1\",\n  \"formaPago\": \"tarjeta\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p1\",\n      \"cantidad\": 0\n    },\n    {\n      \"productoCod\": \"p2\",\n      \"cantidad\": 1.5\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear con cliente y producto inexistentes (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Dice qué cliente y qué producto no existen\", () => {",
+                  "    const d = pm.response.json().detalles.join(\" \");",
+                  "    pm.expect(d).to.include(\"c99\");",
+                  "    pm.expect(d).to.include(\"p99\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"c99\",\n  \"formaPago\": \"contado\",\n  \"lineas\": [\n    {\n      \"productoCod\": \"p99\",\n      \"cantidad\": 1\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear con JSON mal formado (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Dice que el JSON no es válido\", () => pm.expect(pm.response.json().error).to.include(\"JSON\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"clienteId\": \"c1\", "
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Emitir",
+      "item": [
+        {
+          "name": "Emitir: valores de control de la guía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Queda emitida y sin errores\", () => {",
+                  "    pm.expect(r.estado).to.eql(\"emitida\");",
+                  "    pm.expect(r.errores).to.be.empty;",
+                  "});",
+                  "pm.test(\"Subtotal 26 400, IVA 174, total 26 574 (guía §3)\", () => {",
+                  "    pm.expect(r.subtotal).to.eql(26400);",
+                  "    pm.expect(r.iva).to.eql(174);",
+                  "    pm.expect(r.total).to.eql(26574);",
+                  "});",
+                  "pm.test(\"Arroz con 5 % de descuento por volumen e IVA 1 %\", () => {",
+                  "    const arroz = r.lineas.find(l => l.productoCod === \"p1\");",
+                  "    pm.expect(arroz.descVolumen).to.eql(5);",
+                  "    pm.expect(arroz.tarifaIva).to.eql(1);",
+                  "    pm.expect(arroz.base).to.eql(11400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idControl}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idControl}}",
+                "emitir"
+              ]
+            },
+            "description": "Requiere MOTOR=real. Con el motor falso los números no coinciden."
+          }
+        },
+        {
+          "name": "Emitir otra vez la misma factura (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 Conflict\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Dice que ya fue emitida\", () => pm.expect(pm.response.json().error).to.include(\"ya fue emitida\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idControl}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idControl}}",
+                "emitir"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle de la factura emitida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const f = pm.response.json();",
+                  "pm.test(\"Quedó guardada como emitida con sus totales\", () => {",
+                  "    pm.expect(f.estado).to.eql(\"emitida\");",
+                  "    pm.expect(f.total).to.eql(26574);",
+                  "});",
+                  "pm.test(\"Cada línea guarda precio, descuentos, base e IVA\", () => {",
+                  "    f.lineas.forEach(l => {",
+                  "        pm.expect(l.precioUnitario).to.be.a(\"number\");",
+                  "        pm.expect(l.base).to.be.a(\"number\");",
+                  "        pm.expect(l.iva).to.be.a(\"number\");",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idControl}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idControl}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Emitir: cliente exonerado paga IVA 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Emitida con IVA 0\", () => {",
+                  "    pm.expect(r.estado).to.eql(\"emitida\");",
+                  "    pm.expect(r.iva).to.eql(0);",
+                  "});",
+                  "pm.test(\"Volumen 5 % y luego plata 5 %: 12 000 -> 10 830\", () => pm.expect(r.subtotal).to.eql(10830));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idExonerado}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idExonerado}}",
+                "emitir"
+              ]
+            },
+            "description": "Requiere MOTOR=real."
+          }
+        },
+        {
+          "name": "Emitir: crédito a consumidor final (rechazada)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK (rechazada también es 200)\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Queda rechazada y sin totales\", () => {",
+                  "    pm.expect(r.estado).to.eql(\"rechazada\");",
+                  "    pm.expect(r.total).to.eql(null);",
+                  "});",
+                  "pm.test(\"Error credito_no_permitido con mensaje claro\", () => {",
+                  "    pm.expect(r.errores[0].codigo).to.eql(\"credito_no_permitido\");",
+                  "    pm.expect(r.errores[0].mensaje).to.include(\"crédito\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idCredito}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idCredito}}",
+                "emitir"
+              ]
+            },
+            "description": "Requiere MOTOR=real."
+          }
+        },
+        {
+          "name": "Emitir: factura sin líneas (rechazada)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rechazada por factura_sin_lineas\", () => {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.estado).to.eql(\"rechazada\");",
+                  "    pm.expect(r.errores.map(e => e.codigo)).to.include(\"factura_sin_lineas\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idVacia}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idVacia}}",
+                "emitir"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Emitir: stock insuficiente (rechazada)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Rechazada por stock_insuficiente de la laptop\", () => {",
+                  "    const e = pm.response.json().errores[0];",
+                  "    pm.expect(e.codigo).to.eql(\"stock_insuficiente\");",
+                  "    pm.expect(e.productoCod).to.eql(\"p2\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idSinStock}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idSinStock}}",
+                "emitir"
+              ]
+            },
+            "description": "Requiere MOTOR=real."
+          }
+        },
+        {
+          "name": "Emitir otra vez una rechazada (se permite)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK: una rechazada se puede volver a emitir\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/{{idSinStock}}/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "{{idSinStock}}",
+                "emitir"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Emitir factura que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas/999999/emitir",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas",
+                "999999",
+                "emitir"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Historial: rechazadas del cliente c2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const lista = pm.response.json();",
+                  "pm.test(\"Solo rechazadas de c2, incluida la de crédito\", () => {",
+                  "    lista.forEach(f => {",
+                  "        pm.expect(f.estado).to.eql(\"rechazada\");",
+                  "        pm.expect(f.clienteId).to.eql(\"c2\");",
+                  "    });",
+                  "    pm.expect(lista.map(f => f.id)).to.include(pm.collectionVariables.get(\"idCredito\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/facturas?estado=rechazada&cliente=c2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "facturas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "rechazada"
+                },
+                {
+                  "key": "cliente",
+                  "value": "c2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reportes",
+      "item": [
+        {
+          "name": "Reportes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Trae todos los campos del contrato\", () => {",
+                  "    pm.expect(r).to.include.keys(\"ventasTotales\", \"ivaPorPagar\", \"unidadesPorProducto\",",
+                  "        \"productoMasVendido\", \"siguienteConsecutivo\");",
+                  "});",
+                  "pm.test(\"Las ventas incluyen la factura de control\", () => pm.expect(r.ventasTotales).to.be.at.least(26574));",
+                  "pm.test(\"El producto más vendido es el de más unidades\", () => {",
+                  "    const max = Math.max(...r.unidadesPorProducto.map(u => u.unidades));",
+                  "    pm.expect(r.productoMasVendido.unidades).to.eql(max);",
+                  "});",
+                  "pm.test(\"El siguiente consecutivo es mayor que la última factura creada\", () => {",
+                  "    pm.expect(r.siguienteConsecutivo).to.be.above(pm.collectionVariables.get(\"idSinStock\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reportes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reportes"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ]
+}
