@@ -17,7 +17,12 @@ Mientras el PR que lo agrega esté abierto, cualquiera de los dos puede proponer
 | Gráfico | Chart.js | Sencillo y suficiente para el reporte |
 | Despliegue | Front en GitHub Pages, backend en un servicio gratuito de Node (por ejemplo, Render) | Por confirmar cuando el backend esté listo |
 
-Límites conocidos de la opción A, para el informe: el primer arranque de `swipl-wasm` tarda unos segundos y el paquete pesa varios MB. Hay que medirlo y comentarlo en la presentación.
+Límites de la opción A, medidos con `swipl-wasm` 8.2.6 (SWI-Prolog 10.1) en Node 24 sobre Windows:
+- El arranque más la carga de las reglas toma unos 140 ms, solo en la primera llamada. Cada factura después tarda alrededor de 1 ms.
+- El paquete ocupa unos 14 MB en `node_modules`.
+- Por ser WebAssembly, no puede usar librerías nativas de SWI-Prolog. Por ejemplo, la librería JSON se llama `library(json)` y no `library(http/json)`.
+
+Hay que comentar estos límites en la presentación.
 
 ## 2. Quién toca qué carpeta
 
@@ -150,7 +155,8 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 - Hay que sacar el `ensure_loaded(facturacion_datos)` del archivo de reglas. Para la consola y las pruebas se carga aparte.
 - **Los datos nunca se pegan como texto dentro de una consulta Prolog.** Se convierten a términos con comillas seguras (por ejemplo, `format("~q", ...)` en Prolog o un escape equivalente en JS). Es el equivalente Prolog de la inyección SQL.
 - En Prolog, todo el resultado sale de `resultado_factura(Id, resultado(Estado, Subtotal, Iva, Total, Lineas, ConsumoStock, Errores))`. El módulo JS lo traduce al JSON de la §3.1: `null` pasa a `null`, y un `productoCod` igual a `ninguno` se omite.
-- `swipl-wasm` atiende una consulta a la vez. Las llamadas a `calcularFactura` se encolan para que dos facturas no mezclen sus hechos.
+- Las facturas no se mezclan aunque lleguen dos peticiones a la vez. Cada llamada carga sus hechos y consulta en un solo paso síncrono (`once()`), y JavaScript no ejecuta otra llamada en medio. Por eso no hace falta una cola. **Regla para quien toque `api/src/motor/`:** no poner ningún `await` entre la carga de los hechos y la consulta.
+- Los datos entran y salen como texto JSON a través de `reglas/puente_json.pl` (`calcular_factura_json/2` y `precios_kits_json/2`).
 
 ## 4. Contrato de la API
 
