@@ -67,13 +67,24 @@ El formato exacto de cada petición y respuesta está en [docs/CONTRATO.md](docs
 
 | Método | Ruta | Descripción | Respuestas |
 |---|---|---|---|
-| GET | `/api/productos` | Lista los productos | 200 |
+| GET | `/api/salud` | Comprueba que el servidor está vivo y qué motor usa | 200 |
+| GET | `/api/productos` | Productos y kits (el precio del kit lo calcula el motor) | 200 |
 | GET | `/api/clientes` | Lista los clientes | 200 |
-| GET | `/api/facturas?estado=&cliente=` | Lista las facturas (filtros opcionales) | 200 |
-| GET | `/api/facturas/{id}` | Detalle de una factura con sus líneas | 200, 404 |
-| POST | `/api/facturas` | Crea una factura con sus líneas | 201, 400 |
-| POST | `/api/facturas/{id}/emitir` | Calcula la factura con el motor Prolog y guarda el resultado | 200, 404, 409 |
-| GET | `/api/reportes` | Ventas, IVA por pagar y producto más vendido | 200 |
+| GET | `/api/facturas?estado=&cliente=` | Lista las facturas. Filtros opcionales: `estado` (`pendiente`, `emitida`, `rechazada`) y `cliente` | 200, 400 |
+| GET | `/api/facturas/{id}` | Detalle de una factura con sus líneas y errores | 200, 400, 404 |
+| POST | `/api/facturas` | Crea una factura pendiente con sus líneas | 201, 400 |
+| POST | `/api/facturas/{id}/emitir` | Calcula la factura con el motor Prolog y guarda el resultado. Una factura **rechazada** también responde 200 | 200, 400, 404, 409 |
+| GET | `/api/reportes` | Ventas totales, IVA por pagar, unidades por producto, producto más vendido y siguiente consecutivo (solo facturas emitidas) | 200 |
+
+Todos los errores tienen el mismo formato: `{ "error": "Datos inválidos", "detalles": ["..."] }`. Un 500 solo aparece si hay un fallo real (por ejemplo, Neon no responde).
+
+### Seguridad del backend
+
+- La cadena de conexión solo se lee de la variable de entorno `DATABASE_URL`. Se revisó el historial de Git: nunca se subió un `.env` ni una contraseña.
+- Todas las consultas usan parámetros (`$1`, `$2`…). Ningún texto del usuario se pega dentro del SQL.
+- CORS solo acepta los orígenes de `CORS_ORIGIN`.
+- El servidor valida todo lo que recibe (tipos, cantidades, que existan el cliente y los productos) aunque el front end ya lo haya validado.
+- Emitir es una sola transacción con la factura y el stock bloqueados: dos emisiones simultáneas no pueden vender las mismas unidades.
 
 ## Cómo trabajamos con Git
 
