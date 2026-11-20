@@ -1,0 +1,16 @@
+{
+  "id": 5,
+  "consumoStock": [],
+  "errores": [
+    {
+      "codigo": "stock_insuficiente",
+      "mensaje": "No hay suficiente stock de laptop: se pidieron 20 y solo hay 12.",
+      "productoCod": "p2"
+    }
+  ],
+  "estado": "rechazada",
+  "iva": null,
+  "lineas": [],
+  "subtotal": null,
+  "total": null
+}

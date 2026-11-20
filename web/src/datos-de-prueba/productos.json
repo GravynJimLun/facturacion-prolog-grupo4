@@ -1,0 +1,83 @@
+[
+  {
+    "cod": "p1",
+    "nombre": "arroz_1kg",
+    "categoria": "canasta",
+    "precio": 1200,
+    "stock": 190,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p2",
+    "nombre": "laptop",
+    "categoria": "general",
+    "precio": 450000,
+    "stock": 11,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p3",
+    "nombre": "paracetamol",
+    "categoria": "medicamento",
+    "precio": 1500,
+    "stock": 498,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p4",
+    "nombre": "mouse",
+    "categoria": "general",
+    "precio": 8500,
+    "stock": 67,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p5",
+    "nombre": "hora_soporte",
+    "categoria": "general",
+    "precio": 25000,
+    "stock": 9995,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p6",
+    "nombre": "libro_texto",
+    "categoria": "exento",
+    "precio": 12000,
+    "stock": 29,
+    "tipo": "producto"
+  },
+  {
+    "cod": "p7",
+    "nombre": "teclado",
+    "categoria": "general",
+    "precio": 18000,
+    "stock": 29,
+    "tipo": "producto"
+  },
+  {
+    "cod": "k1",
+    "nombre": "kit_oficina",
+    "tipo": "kit",
+    "categoria": "general",
+    "precio": 452675,
+    "stock": null,
+    "componentes": [
+      "p2",
+      "p4",
+      "p7"
+    ]
+  },
+  {
+    "cod": "k2",
+    "nombre": "kit_oficina_con_soporte",
+    "tipo": "kit",
+    "categoria": "general",
+    "precio": 453791.25,
+    "stock": null,
+    "componentes": [
+      "k1",
+      "p5"
+    ]
+  }
+]

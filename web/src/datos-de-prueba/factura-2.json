@@ -1,0 +1,54 @@
+{
+  "id": 2,
+  "formaPago": "contado",
+  "estado": "emitida",
+  "subtotal": 26400,
+  "iva": 174,
+  "total": 26574,
+  "creadaEn": "2026-11-20T03:04:05.799Z",
+  "cliente": {
+    "id": "c2",
+    "nombre": "juan_perez",
+    "tipo": "consumidor_final",
+    "nivel": "regular"
+  },
+  "lineas": [
+    {
+      "productoCod": "p1",
+      "productoNombre": "arroz_1kg",
+      "cantidad": 10,
+      "categoria": "canasta",
+      "precioUnitario": 1200,
+      "descVolumen": 5,
+      "descCliente": 0,
+      "base": 11400,
+      "tarifaIva": 1,
+      "iva": 114
+    },
+    {
+      "productoCod": "p3",
+      "productoNombre": "paracetamol",
+      "cantidad": 2,
+      "categoria": "medicamento",
+      "precioUnitario": 1500,
+      "descVolumen": 0,
+      "descCliente": 0,
+      "base": 3000,
+      "tarifaIva": 2,
+      "iva": 60
+    },
+    {
+      "productoCod": "p6",
+      "productoNombre": "libro_texto",
+      "cantidad": 1,
+      "categoria": "exento",
+      "precioUnitario": 12000,
+      "descVolumen": 0,
+      "descCliente": 0,
+      "base": 12000,
+      "tarifaIva": 0,
+      "iva": 0
+    }
+  ],
+  "errores": []
+}

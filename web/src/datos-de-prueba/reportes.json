@@ -1,0 +1,52 @@
+{
+  "ventasTotales": 2168152,
+  "ivaPorPagar": 178680,
+  "unidadesPorProducto": [
+    {
+      "productoCod": "k2",
+      "nombre": "kit_oficina_con_soporte",
+      "unidades": 1
+    },
+    {
+      "productoCod": "p1",
+      "nombre": "arroz_1kg",
+      "unidades": 10
+    },
+    {
+      "productoCod": "p2",
+      "nombre": "laptop",
+      "unidades": 3
+    },
+    {
+      "productoCod": "p3",
+      "nombre": "paracetamol",
+      "unidades": 2
+    },
+    {
+      "productoCod": "p4",
+      "nombre": "mouse",
+      "unidades": 12
+    },
+    {
+      "productoCod": "p5",
+      "nombre": "hora_soporte",
+      "unidades": 3
+    },
+    {
+      "productoCod": "p6",
+      "nombre": "libro_texto",
+      "unidades": 1
+    },
+    {
+      "productoCod": "p7",
+      "nombre": "teclado",
+      "unidades": 10
+    }
+  ],
+  "productoMasVendido": {
+    "productoCod": "p4",
+    "nombre": "mouse",
+    "unidades": 12
+  },
+  "siguienteConsecutivo": 7
+}

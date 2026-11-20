@@ -1,0 +1,26 @@
+[
+  {
+    "id": "c1",
+    "nombre": "tienda_sol",
+    "tipo": "contribuyente",
+    "nivel": "oro"
+  },
+  {
+    "id": "c2",
+    "nombre": "juan_perez",
+    "tipo": "consumidor_final",
+    "nivel": "regular"
+  },
+  {
+    "id": "c3",
+    "nombre": "fundacion_esperanza",
+    "tipo": "exonerado",
+    "nivel": "plata"
+  },
+  {
+    "id": "c4",
+    "nombre": "comercial_luna",
+    "tipo": "contribuyente",
+    "nivel": "regular"
+  }
+]
