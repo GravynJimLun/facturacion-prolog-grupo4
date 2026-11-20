@@ -100,9 +100,11 @@ export default function Historial() {
                         {formatoColones(f.total)}
                       </td>
                       <td data-titulo="Fecha">{formatoFecha(f.creadaEn)}</td>
-                      <td data-titulo="Acciones" className="acciones">
-                        <Link to={`/facturas/${f.id}`}>Ver detalle</Link>
-                        {f.estado !== 'emitida' && <Link to={`/facturas/${f.id}/emitir`}>Emitir</Link>}
+                      <td data-titulo="Acciones">
+                        <div className="acciones">
+                          <Link to={`/facturas/${f.id}`}>Ver detalle</Link>
+                          {f.estado !== 'emitida' && <Link to={`/facturas/${f.id}/emitir`}>Emitir</Link>}
+                        </div>
                       </td>
                     </tr>
                   ))}
