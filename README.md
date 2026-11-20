@@ -58,6 +58,8 @@ npm start        # http://localhost:3000/api/salud
 
 Las variables de entorno y la estructura del código están en [api/README.md](api/README.md).
 
+Para publicarlo en internet (backend en Render y front end en GitHub Pages), ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
 ### 4. Front end
 React + Vite. Requiere Node.js 22 o superior:
 
