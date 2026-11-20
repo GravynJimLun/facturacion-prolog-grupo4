@@ -15,7 +15,7 @@ Es un sistema de facturación con cuatro piezas:
 
 | Carpeta | Contenido |
 |---|---|
-| `reglas/` | Motor de reglas en Prolog (`facturacion_datos.pl` trae los datos de ejemplo) |
+| `reglas/` | Motor de reglas (`facturacion.pl`), datos de ejemplo (`facturacion_datos.pl`) y pruebas (`pruebas_facturacion.pl`) |
 | `sql/` | Script de Neon: tablas y datos de ejemplo (`facturacion_neon.sql`) |
 | `api/` | Backend (API) |
 | `web/` | Front end |
@@ -33,8 +33,27 @@ Es un sistema de facturación con cuatro piezas:
 Requiere [SWI-Prolog](https://www.swi-prolog.org/download/stable).
 
 ```bash
-swipl reglas/facturacion_datos.pl
+swipl reglas/facturacion.pl          # carga el motor y los datos de ejemplo
 ```
+
+Consultas útiles:
+
+```prolog
+?- resultado_factura(2, R).          % estado, subtotal, IVA, total y errores
+?- lineas_calculadas(6, L).          % detalle por línea (precio, descuentos, base, IVA)
+?- errores_explicados(5, E).         % errores en lenguaje claro
+?- reporte_ventas(Sub, Iva, Total).  % solo facturas emitidas
+?- producto_mas_vendido(P, U).
+?- siguiente_consecutivo(N).
+```
+
+Pruebas automáticas (plunit, 26 casos):
+
+```bash
+swipl -g run_tests -t halt reglas/pruebas_facturacion.pl
+```
+
+Los cálculos a mano de las 6 facturas de ejemplo están en [`docs/calculos_a_mano.md`](docs/calculos_a_mano.md).
 
 ### 3. Backend
 _Por definir: tecnología, instalación y comando para arrancarlo._
