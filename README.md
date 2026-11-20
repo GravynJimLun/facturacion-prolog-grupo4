@@ -1,5 +1,7 @@
 # Sistema de facturación con Prolog
 
+[![Pruebas del motor Prolog](https://github.com/GravynJimLun/facturacion-prolog-grupo4/actions/workflows/pruebas-prolog.yml/badge.svg)](https://github.com/GravynJimLun/facturacion-prolog-grupo4/actions/workflows/pruebas-prolog.yml)
+
 Proyecto grupal del curso **SC-250 Paradigmas de Programación**, Universidad Fidélitas.
 
 Es un sistema de facturación con cuatro piezas:
@@ -33,8 +35,16 @@ Es un sistema de facturación con cuatro piezas:
 Requiere [SWI-Prolog](https://www.swi-prolog.org/download/stable).
 
 ```bash
-swipl reglas/facturacion_datos.pl
+# Consola con los datos de ejemplo
+swipl reglas/consola.pl
+?- totales_factura(2, Subtotal, Iva, Total).
+?- errores_factura(5, Errores).
+
+# Pruebas automáticas (plunit)
+swipl -g run_tests -t halt reglas/pruebas.pl
 ```
+
+`facturacion_reglas.pl` solo tiene las reglas; `facturacion_datos.pl` solo tiene los datos de ejemplo. Las pruebas corren solas en cada Pull Request con GitHub Actions. La verificación a mano de las facturas está en [docs/VERIFICACION.md](docs/VERIFICACION.md).
 
 ### 3. Backend
 _Por definir: tecnología, instalación y comando para arrancarlo._

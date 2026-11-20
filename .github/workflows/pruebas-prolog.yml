@@ -1,0 +1,24 @@
+# Corre las pruebas plunit del motor en cada Pull Request y en cada push a main.
+# Si alguna prueba falla, el PR queda marcado en rojo.
+name: Pruebas del motor Prolog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar SWI-Prolog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y swi-prolog-nox
+          swipl --version
+
+      - name: Correr las pruebas
+        run: swipl -g run_tests -t halt reglas/pruebas.pl
