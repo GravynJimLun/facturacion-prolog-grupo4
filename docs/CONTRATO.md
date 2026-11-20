@@ -1,0 +1,287 @@
+# Contrato entre motor, API y front end
+
+Este documento fija los acuerdos que permiten que **Gravyn** (motor Prolog y pantallas de resultados) y **Armando** (backend y resto del front end) trabajen en paralelo sin esperarse.
+
+Mientras el PR que lo agrega esté abierto, cualquiera de los dos puede proponer cambios. Después del merge, **cualquier cambio a este contrato va en su propio PR y lo aprueban los dos**, porque romperlo rompe el trabajo del otro.
+
+---
+
+## 1. Tecnología
+
+| Pieza | Decisión | Por qué |
+|---|---|---|
+| Backend | Node.js 22 LTS o superior + Express | Lo más documentado y sencillo de desplegar gratis |
+| Acceso a Neon | Paquete `pg` (node-postgres), **siempre con consultas parametrizadas** (`$1, $2…`) | Evita la inyección SQL (guía §4) |
+| Motor Prolog | Paquete `swipl-wasm` dentro del backend (opción **A** de la guía) | No hay que instalar SWI-Prolog en el servidor; funciona en cualquier hosting de Node |
+| Front end | React + Vite | `.env.example` ya usa el puerto 5173 de Vite; React facilita el estado de «nueva factura» |
+| Gráfico | Chart.js | Sencillo y suficiente para el reporte |
+| Despliegue | Front en GitHub Pages, backend en un servicio gratuito de Node (por ejemplo, Render) | Por confirmar cuando el backend esté listo |
+
+Límites conocidos de la opción A, para el informe: el primer arranque de `swipl-wasm` tarda unos segundos y el paquete pesa varios MB. Hay que medirlo y comentarlo en la presentación.
+
+## 2. Quién toca qué carpeta
+
+Cada persona trabaja solo en sus carpetas, así casi no hay conflictos de merge.
+
+```
+reglas/                         Gravyn
+  facturacion_reglas.pl           reglas del negocio (sin datos)
+  facturacion_datos.pl            datos de ejemplo (solo para consola y pruebas)
+  pruebas.pl                      pruebas plunit
+api/                            Armando (excepto src/motor/)
+  package.json
+  src/
+    server.js, db.js, rutas/      Armando
+    motor-falso.js                Armando (ver §3.4)
+    motor/                        Gravyn
+      index.js                      exporta calcularFactura() y preciosKits()
+web/                            Armando (excepto las 3 páginas de Gravyn)
+  src/
+    api.js                        Armando: todas las llamadas a la API
+    datos-de-prueba/              Armando: JSON de ejemplo según la §4
+    paginas/
+      Catalogo.jsx, NuevaFactura.jsx, Historial.jsx    Armando
+      Emitir.jsx, Detalle.jsx, Reportes.jsx            Gravyn
+sql/                            Armando
+docs/                           Los dos
+```
+
+## 3. Contrato del motor (`api/src/motor/index.js`)
+
+El motor es el único lugar donde se calculan descuentos, IVA, validaciones y precios de kits. **El backend no repite ninguna de esas reglas.**
+
+### 3.1 `calcularFactura(datos)` → `Promise<Resultado>`
+
+**Entrada.** El backend la arma leyendo Neon:
+
+```json
+{
+  "factura":  { "id": 2, "clienteId": "c2", "formaPago": "contado" },
+  "lineas":   [ { "productoCod": "p1", "cantidad": 10 },
+                { "productoCod": "p3", "cantidad": 2 },
+                { "productoCod": "p6", "cantidad": 1 } ],
+  "cliente":  { "id": "c2", "nombre": "juan_perez", "tipo": "consumidor_final", "nivel": "regular" },
+  "productos": [ { "cod": "p1", "nombre": "arroz_1kg", "categoria": "canasta", "precio": 1200, "stock": 200 } ],
+  "kits":      [ { "cod": "k1", "componentes": ["p2", "p4", "p7"] },
+                 { "cod": "k2", "componentes": ["k1", "p5"] } ]
+}
+```
+
+- `productos` y `kits` traen **el catálogo completo**, no solo lo que aparece en la factura, porque un kit necesita los precios y el stock de sus componentes.
+- `kits` se arma agrupando la tabla `kit_items` por `kit_cod`.
+
+**Salida cuando la factura se emite.** Ejemplo con la factura 2, que coincide con los valores de control de la guía:
+
+```json
+{
+  "estado": "emitida",
+  "subtotal": 26400,
+  "iva": 174,
+  "total": 26574,
+  "lineas": [
+    { "productoCod": "p1", "cantidad": 10, "categoria": "canasta",     "precioUnitario": 1200,
+      "descVolumen": 5, "descCliente": 0, "base": 11400, "tarifaIva": 1, "iva": 114 },
+    { "productoCod": "p3", "cantidad": 2,  "categoria": "medicamento", "precioUnitario": 1500,
+      "descVolumen": 0, "descCliente": 0, "base": 3000,  "tarifaIva": 2, "iva": 60 },
+    { "productoCod": "p6", "cantidad": 1,  "categoria": "exento",      "precioUnitario": 12000,
+      "descVolumen": 0, "descCliente": 0, "base": 12000, "tarifaIva": 0, "iva": 0 }
+  ],
+  "consumoStock": [ { "productoCod": "p1", "cantidad": 10 },
+                    { "productoCod": "p3", "cantidad": 2 },
+                    { "productoCod": "p6", "cantidad": 1 } ],
+  "errores": []
+}
+```
+
+**Salida cuando la factura se rechaza.** Ejemplo con la factura 5:
+
+```json
+{
+  "estado": "rechazada",
+  "subtotal": null,
+  "iva": null,
+  "total": null,
+  "lineas": [],
+  "consumoStock": [],
+  "errores": [
+    { "codigo": "stock_insuficiente", "productoCod": "p2",
+      "mensaje": "No hay suficiente stock de laptop: se pidieron 20 y solo hay 15." }
+  ]
+}
+```
+
+### 3.2 Reglas de los campos
+
+| Campo | Regla |
+|---|---|
+| `descVolumen`, `descCliente`, `tarifaIva` | Porcentajes enteros: 5 significa 5 % |
+| `precioUnitario` | Puede tener decimales en un kit (por ejemplo, k2 = 453 791,25). No se redondea |
+| `base`, `iva` de cada línea | Enteros redondeados al colón (guía §3) |
+| `subtotal`, `iva`, `total` | Suma de las líneas. Son `null` si la factura es rechazada |
+| `consumoStock` | Unidades de **productos** que se descuentan del stock. Los kits se expanden a sus componentes de forma recursiva. Va vacío si la factura es rechazada |
+| `errores[].mensaje` | Texto en español, listo para mostrar al usuario. Lo arma Prolog |
+| `errores[].productoCod` | Solo en los errores ligados a una línea |
+
+### 3.3 Códigos de error del motor
+
+| `codigo` | Cuándo | Ejemplo de `mensaje` |
+|---|---|---|
+| `factura_sin_lineas` | La factura no tiene líneas | «La factura no tiene líneas.» |
+| `cantidad_invalida` | Cantidad ≤ 0 | «La cantidad de mouse debe ser mayor que cero.» |
+| `stock_insuficiente` | Stock menor que lo pedido (en un kit: algún componente) | «No hay suficiente stock de laptop: se pidieron 20 y solo hay 15.» |
+| `credito_no_permitido` | Crédito para un consumidor final o un cliente regular | «comercial_luna es un cliente de nivel regular y no puede comprar a crédito.» |
+
+Una factura puede traer **varios errores a la vez**. El motor los devuelve todos, no solo el primero.
+
+### 3.4 `preciosKits(datos)` → `Promise<{ [cod]: precio }>`
+
+Recibe `{ productos, kits }` (el mismo formato de la §3.1) y devuelve el precio de cada kit, por ejemplo `{ "k1": 452675, "k2": 453791.25 }`. El backend lo usa en `GET /api/productos`, para que el front pueda estimar subtotales sin repetir la regla de los kits.
+
+### 3.5 Motor falso
+
+Mientras el motor real no esté listo, Armando usa `api/src/motor-falso.js`. Exporta las mismas dos funciones y devuelve los JSON de ejemplo de este documento.
+
+El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real`. Cuando Gravyn entregue `api/src/motor/`, basta con cambiar la variable.
+
+### 3.6 Notas de implementación (Gravyn)
+
+- En producción los datos vienen de Neon, no de `facturacion_datos.pl`. El motor carga **solo** `facturacion_reglas.pl`, declara los hechos como `dynamic` y, en cada llamada, hace `retractall` y luego `assertz` con lo que recibe.
+- Hay que sacar el `ensure_loaded(facturacion_datos)` del archivo de reglas. Para la consola y las pruebas se carga aparte.
+- **Los datos nunca se pegan como texto dentro de una consulta Prolog.** Se convierten a términos con comillas seguras (por ejemplo, `format("~q", ...)` en Prolog o un escape equivalente en JS). Es el equivalente Prolog de la inyección SQL.
+- `swipl-wasm` atiende una consulta a la vez. Las llamadas a `calcularFactura` se encolan para que dos facturas no mezclen sus hechos.
+
+## 4. Contrato de la API
+
+### 4.1 Convenciones
+
+- JSON en `camelCase`. Neon usa `snake_case` y el backend traduce.
+- Los montos van en colones enteros, excepto el precio unitario de los kits.
+- Estados de factura: `pendiente` (creada sin emitir; en Neon `estado` es `NULL`), `emitida` o `rechazada`.
+- Formato de error, igual en todos los endpoints:
+
+```json
+{ "error": "Datos inválidos", "detalles": ["La cantidad de la línea 2 debe ser un entero mayor que 0."] }
+```
+
+`detalles` es opcional.
+
+### 4.2 Endpoints
+
+| Método y ruta | Respuestas | Notas |
+|---|---|---|
+| `GET /api/productos` | 200 | Productos y kits (§4.3) |
+| `GET /api/clientes` | 200 | `[{ id, nombre, tipo, nivel }]` |
+| `GET /api/facturas?estado=&cliente=` | 200 | Ambos filtros son opcionales (§4.4) |
+| `GET /api/facturas/{id}` | 200, 404 | Factura con su cliente, líneas y errores (§4.5) |
+| `POST /api/facturas` | 201, 400 | Crea la factura en estado `pendiente` (§4.6) |
+| `POST /api/facturas/{id}/emitir` | 200, 404, 409 | Llama al motor y guarda el resultado (§4.7) |
+| `GET /api/reportes` | 200 | §4.8 |
+
+### 4.3 `GET /api/productos`
+
+```json
+[
+  { "cod": "p1", "nombre": "arroz_1kg", "tipo": "producto", "categoria": "canasta", "precio": 1200, "stock": 200 },
+  { "cod": "k1", "nombre": "kit_oficina", "tipo": "kit", "categoria": "general", "precio": 452675, "stock": null,
+    "componentes": ["p2", "p4", "p7"] }
+]
+```
+
+### 4.4 `GET /api/facturas`
+
+```json
+[
+  { "id": 2, "clienteId": "c2", "clienteNombre": "juan_perez", "formaPago": "contado",
+    "estado": "emitida", "subtotal": 26400, "iva": 174, "total": 26574, "creadaEn": "2026-11-19T15:30:00Z" }
+]
+```
+
+Valores de los filtros: `estado` puede ser `pendiente`, `emitida` o `rechazada`; `cliente` es el id del cliente.
+
+### 4.5 `GET /api/facturas/{id}`
+
+```json
+{
+  "id": 2, "formaPago": "contado", "estado": "emitida",
+  "subtotal": 26400, "iva": 174, "total": 26574, "creadaEn": "2026-11-19T15:30:00Z",
+  "cliente": { "id": "c2", "nombre": "juan_perez", "tipo": "consumidor_final", "nivel": "regular" },
+  "lineas": [
+    { "productoCod": "p1", "productoNombre": "arroz_1kg", "cantidad": 10, "categoria": "canasta",
+      "precioUnitario": 1200, "descVolumen": 5, "descCliente": 0, "base": 11400, "tarifaIva": 1, "iva": 114 }
+  ],
+  "errores": []
+}
+```
+
+- En una factura `pendiente`, las líneas solo traen `productoCod`, `productoNombre` y `cantidad`; los campos calculados vienen en `null`.
+- El detalle de cada línea **se guarda al emitir** (§5). Al consultar no se recalcula, porque el stock ya cambió.
+
+### 4.6 `POST /api/facturas`
+
+Cuerpo de la petición:
+
+```json
+{ "clienteId": "c2", "formaPago": "contado",
+  "lineas": [ { "productoCod": "p1", "cantidad": 10 } ] }
+```
+
+Validaciones del servidor (400 si fallan):
+- `clienteId` existe en Neon.
+- `formaPago` es `contado` o `credito`.
+- `lineas` es un arreglo, y cada `productoCod` existe como producto o como kit.
+- `cantidad` es un entero mayor que 0.
+
+Lo que **no** se valida aquí: el stock, el crédito ni que haya líneas. Eso lo decide el motor al emitir. Se permite crear una factura con `lineas: []`, para que el motor la rechace por `factura_sin_lineas`.
+
+Respuesta: **201** con el mismo formato de §4.5 (estado `pendiente`) y la cabecera `Location: /api/facturas/{id}`.
+
+### 4.7 `POST /api/facturas/{id}/emitir`
+
+1. **404** si la factura no existe. **409** si ya está `emitida`. Una factura `rechazada` se puede volver a emitir, porque el stock pudo haber cambiado.
+2. Lee la factura, las líneas, el cliente y el catálogo, y llama a `calcularFactura`.
+3. En **una sola transacción**:
+   - guarda `estado`, `subtotal`, `iva`, `total` y `errores` (como JSON en la columna de texto) en `facturas`;
+   - guarda el detalle de cada línea en `lineas`;
+   - si quedó `emitida`, descuenta el stock según `consumoStock`.
+4. Responde **200** con `{ "id": 2, ...Resultado del motor }`.
+
+**Una factura rechazada responde 200, no 400.** La petición se procesó bien; lo que dice que no es la regla del negocio.
+
+### 4.8 `GET /api/reportes`
+
+```json
+{
+  "ventasTotales": 26574,
+  "ivaPorPagar": 174,
+  "unidadesPorProducto": [ { "productoCod": "p1", "nombre": "arroz_1kg", "unidades": 10 } ],
+  "productoMasVendido": { "productoCod": "p1", "nombre": "arroz_1kg", "unidades": 10 },
+  "siguienteConsecutivo": 7
+}
+```
+
+- Solo cuentan las facturas **emitidas**. Las unidades se agrupan por el código de la línea, así que un kit cuenta como kit.
+- Se calcula con SQL sobre Neon, sin el motor.
+- Los reportes del motor Prolog (#8) deben dar **los mismos números** con los datos de ejemplo. Es una buena verificación cruzada para el informe.
+
+## 5. Cambio en la base de datos (Armando)
+
+Hay que guardar el detalle por línea. Se agrega `sql/002_detalle_lineas.sql`:
+
+```sql
+ALTER TABLE lineas
+  ADD COLUMN IF NOT EXISTS precio_unitario NUMERIC,
+  ADD COLUMN IF NOT EXISTS categoria       TEXT,
+  ADD COLUMN IF NOT EXISTS desc_volumen    INTEGER,
+  ADD COLUMN IF NOT EXISTS desc_cliente    INTEGER,
+  ADD COLUMN IF NOT EXISTS base            INTEGER,
+  ADD COLUMN IF NOT EXISTS tarifa_iva      INTEGER,
+  ADD COLUMN IF NOT EXISTS iva             INTEGER;
+```
+
+## 6. Forma de trabajar
+
+- **Ramas:** `gravyn/<tarea>` y `armando/<tarea>`, siempre desde `main` actualizado. Nadie hace push directo a `main`.
+- **Commits:** en español, en imperativo y pequeños. Por ejemplo: «Agrega descuento por volumen».
+- **Pull Requests:** cada PR menciona su issue con `Closes #N`, y lo aprueba la otra persona. La revisión debe dejarnos capaces de explicar el código, no solo de darle «Approve».
+- **Bitácora:** cada uno agrega sus entradas en `BITACORA_IA.md` dentro del mismo PR donde usó la IA.
+- **Secretos:** `.env` nunca se sube. La cadena de Neon se comparte por un canal privado.
