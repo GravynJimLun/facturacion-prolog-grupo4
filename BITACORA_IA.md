@@ -52,3 +52,41 @@ Completó el motor (issues #2 a #8): descuento por volumen y por cliente, cálcu
 _Pendiente: rehacer con calculadora los números de `docs/VERIFICACION.md` y poder explicar cada regla de `facturacion_reglas.pl`._
 
 ---
+
+## Entrada 3 · 2026-11-19 · Integrante: Armando
+
+**Herramienta:** Claude Code (Claude Opus 5.5)
+
+**Prompt:**
+> «Haz todo lo que puedas». Antes, en la misma sesión: «revisa esta carpeta», «empieza», «tráigase los cambios del git, haga aceptar, merge».
+
+**Qué respondió la IA (resumen):**
+- **Backend** (issues #11 a #16): esqueleto con Express, conexión a Neon con `pg`, motor falso, endpoints del contrato §4, validación en el servidor, transacciones y CORS. Además, la migración `sql/002_detalle_lineas.sql` (#35).
+- **Colección de Postman** (#17): 29 peticiones y 62 pruebas.
+- **Front end** (#18, #19, #20, #23 y #25): React + Vite, con catálogo, nueva factura e historial, datos de prueba y un workflow para GitHub Pages.
+
+**Qué estaba mal o incompleto:**
+1. **Trabajo repetido.** Al decirle «empieza», la IA escribió un motor Prolog completo (PR #38) sin revisar antes los issues ni los PR abiertos. Ese motor ya lo estaba haciendo Gravyn (PR #37). Se cerró sin merge.
+2. **Pruebas que fallaban por el módulo** (en ese mismo PR #38). Las pruebas agregaban facturas con `assertz`, pero dentro del módulo de `plunit` y no en `user`, donde vive el motor. Fallaron 8 pruebas.
+3. **Un commit que no funciona solo.** El commit «Agrega GET de productos y clientes» ya registra en `app.js` las rutas de facturas y reportes, que llegan en los dos commits siguientes. Si alguien hace checkout justo de ese commit, el servidor no arranca.
+4. **Datos de prueba poco útiles.** Los primeros JSON de `web/src/datos-de-prueba/` se capturaron con todas las facturas pendientes, así que el historial no mostraba facturas emitidas ni rechazadas.
+
+**Cómo lo detectamos y corregimos:**
+1. Al traer los cambios de GitHub aparecieron los PR #32, #36 y #37 y los issues asignados. Se compararon los dos motores: dan los mismos números en las 6 facturas y en los reportes, así que el #38 sirvió como verificación cruzada antes de cerrarlo. **Lección:** antes de empezar una tarea, hacer `git fetch` y revisar los issues y los PR.
+2. Las pruebas fallaron al correrlas. Se agregó el prefijo `user:` a `assertz` y `retractall`.
+3. Se detectó al repasar el historial antes de abrir el PR. Se dejó así para no reescribir commits ya creados, pero queda anotado.
+4. Se reinició la base local, se emitieron las 6 facturas y se volvieron a capturar los JSON: quedaron 4 emitidas y 2 rechazadas.
+
+**Cómo se verificó el backend sin Neon:**
+- Se levantó un PostgreSQL local temporal con los mismos scripts de `sql/`.
+- Se conectó la API con el motor Prolog de Gravyn mediante un puente provisional fuera del repositorio. El motor definitivo con `swipl-wasm` es el issue #34.
+- Resultados al emitir las 6 facturas de ejemplo por la API:
+  - las facturas 2 y 3 dieron los valores de control de la guía;
+  - `GET /api/reportes`, calculado con SQL, dio lo mismo que los reportes del motor Prolog (ventas 2.168.152, IVA 178.680).
+- Tres emisiones simultáneas de la misma factura: una respondió 200, dos respondieron 409, y el stock se descontó una sola vez.
+- Las pantallas se probaron con un navegador automático, en escritorio y en celular.
+
+**Verificación del integrante:**
+_Pendiente: correr la colección de Postman contra Neon y leer el código de `api/src/` hasta poder explicarlo._
+
+---
