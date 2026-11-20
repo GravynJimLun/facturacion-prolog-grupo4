@@ -50,7 +50,15 @@ swipl -g run_tests -t halt reglas/pruebas.pl
 _Por definir: tecnología, instalación y comando para arrancarlo._
 
 ### 4. Front end
-_Por definir._
+React + Vite. Requiere Node.js 22 o superior:
+
+```bash
+cd web
+npm install
+npm run dev      # http://localhost:5173
+```
+
+Con `VITE_DATOS_DE_PRUEBA=true` funciona sin backend. Las pantallas, rutas y la publicación en GitHub Pages están en [web/README.md](web/README.md).
 
 ## Endpoints de la API
 
