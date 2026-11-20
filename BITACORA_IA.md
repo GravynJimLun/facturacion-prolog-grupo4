@@ -53,7 +53,37 @@ _Pendiente: rehacer con calculadora los números de `docs/VERIFICACION.md` y pod
 
 ---
 
-## Entrada 3 · 2026-11-19 · Integrante: Armando
+## Entrada 3 · 2026-11-19 · Integrante: Gravyn
+
+**Herramienta:** Claude Code (Claude Opus 5.5)
+
+**Prompt:**
+> «Qué más podemos hacer, necesito avanzar». La IA propuso hacer el issue #34: el módulo que conecta el motor Prolog con el backend en Node, usando `swipl-wasm`.
+
+**Qué respondió la IA (resumen):**
+- `reglas/puente_json.pl`: recibe y devuelve JSON como texto, así que los datos nunca se pegan dentro de una consulta.
+- `api/src/motor/index.js`, con `calcularFactura()` y `preciosKits()`.
+- 10 pruebas con `node:test`.
+- Un segundo trabajo en GitHub Actions que corre esas pruebas.
+
+**Qué estaba mal o incompleto:**
+1. **El contrato suponía que `swipl-wasm` tardaba «unos segundos» en arrancar.** Al medirlo, el arranque con la carga de reglas tomó unos 140 ms, y cada factura después, alrededor de 1 ms.
+2. **El contrato decía que las llamadas al motor había que encolarlas.** No hace falta: la consulta es síncrona y JavaScript no puede intercalar otra en medio.
+3. **La IA intentó cargar `library(http/json)`, que no existe en el build WebAssembly** (SWI-Prolog 10.1). Allí la librería se llama `library(json)`. En cambio, GitHub Actions usa SWI-Prolog 9.2, donde sigue siendo `library(http/json)`.
+4. **La versión más nueva de `swipl-wasm` tenía solo 2 días publicada.** Por prudencia se fijó la 8.2.6, que llevaba 19 días.
+
+**Cómo lo detectamos y corregimos:**
+1. y 2. Antes de escribir el módulo se hizo una prueba pequeña que midió el arranque. El contrato se corrigió con los números reales (§1 y §3.6).
+3. Se detectó en esa misma prueba. `puente_json.pl` carga la librería que exista, con `:- if(exists_source(library(json)))`.
+4. La versión quedó fija en `package.json` (sin `^`) y en `package-lock.json`.
+5. **Prueba de seguridad:** un nombre de cliente con comillas, paréntesis y `halt.` pasa por el motor sin romper la consulta.
+
+**Verificación del integrante:**
+_Pendiente: correr `npm test` en `api/` y leer `puente_json.pl` hasta poder explicarlo._
+
+---
+
+## Entrada 4 · 2026-11-19 · Integrante: Armando
 
 **Herramienta:** Claude Code (Claude Opus 5.5)
 

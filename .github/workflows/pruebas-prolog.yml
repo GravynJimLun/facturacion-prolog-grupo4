@@ -22,3 +22,26 @@ jobs:
 
       - name: Correr las pruebas
         run: swipl -g run_tests -t halt reglas/pruebas.pl
+
+  # El mismo motor, pero cargado desde Node con swipl-wasm, como lo usa el backend.
+  motor-node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Correr las pruebas
+        run: npm test
