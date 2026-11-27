@@ -145,7 +145,7 @@ Recibe `{ productos, kits }` (el mismo formato de la §3.1) y devuelve el precio
 
 ### 3.5 Motor falso
 
-Mientras el motor real no esté listo, Armando usa `api/src/motor-falso.js`. Exporta las mismas dos funciones y devuelve los JSON de ejemplo de este documento.
+Mientras el motor real no esté listo, Armando usa `api/src/motor-falso.js`. Exporta las mismas cuatro funciones y devuelve los JSON de ejemplo de este documento.
 
 El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real`. Cuando Gravyn entregue `api/src/motor/`, basta con cambiar la variable.
 
@@ -157,6 +157,52 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 - En Prolog, todo el resultado sale de `resultado_factura(Id, resultado(Estado, Subtotal, Iva, Total, Lineas, ConsumoStock, Errores))`. El módulo JS lo traduce al JSON de la §3.1: `null` pasa a `null`, y un `productoCod` igual a `ninguno` se omite.
 - Las facturas no se mezclan aunque lleguen dos peticiones a la vez. Cada llamada carga sus hechos y consulta en un solo paso síncrono (`once()`), y JavaScript no ejecuta otra llamada en medio. Por eso no hace falta una cola. **Regla para quien toque `api/src/motor/`:** no poner ningún `await` entre la carga de los hechos y la consulta.
 - Los datos entran y salen como texto JSON a través de `reglas/puente_json.pl` (`calcular_factura_json/2` y `precios_kits_json/2`).
+
+### 3.7 Mantenimiento de productos: `validarProducto(datos)` y `validarEliminarProducto(datos)`
+
+El backend **no decide** si un producto es válido: antes de guardar en Neon le pregunta al motor. Las reglas están en `reglas/facturacion_reglas.pl` §10.
+
+**`validarProducto`.** Se llama antes de `POST /api/productos` (`operacion: "crear"`) y de `PUT /api/productos/{cod}` (`operacion: "actualizar"`):
+
+```json
+{
+  "operacion": "crear",
+  "producto":  { "cod": "p8", "nombre": "cafe_molido", "categoria": "canasta", "precio": 3500, "stock": 40 },
+  "productos": [ { "cod": "p4", "nombre": "mouse", "categoria": "general", "precio": 8500, "stock": 80, "activo": false } ],
+  "kits":      [ { "cod": "k1", "componentes": ["p2", "p4", "p7"] } ]
+}
+```
+
+- `productos` es el catálogo **completo, con los desactivados**. Un código desactivado sigue ocupado, porque es la llave primaria. En cambio, su nombre se puede volver a usar.
+- `activo` es opcional. Si no viene, el producto cuenta como activo.
+
+**`validarEliminarProducto`.** Se llama antes de `DELETE /api/productos/{cod}`, con la entrada `{ "cod": "p2", "productos": [...], "kits": [...] }`.
+
+**Las dos funciones devuelven lo mismo:**
+
+```json
+{
+  "valido": false,
+  "errores": [
+    { "codigo": "producto_en_kit", "campo": "cod",
+      "mensaje": "No se puede eliminar laptop porque forma parte de estos kits: k1, k2." }
+  ]
+}
+```
+
+`campo` es el dato del formulario que hay que corregir. El front lo usa para marcar ese campo. Igual que con las facturas, el motor devuelve **todos** los errores juntos.
+
+### 3.8 Códigos de error de productos
+
+| `codigo` | `campo` | Cuándo | Ejemplo de `mensaje` |
+|---|---|---|---|
+| `codigo_duplicado` | `cod` | Al crear, el código ya es de un producto (aunque esté desactivado) o de un kit | «Ya existe un producto o kit con el código p1.» |
+| `nombre_vacio` | `nombre` | El nombre está vacío o tiene solo espacios | «El nombre del producto no puede estar vacío.» |
+| `nombre_duplicado` | `nombre` | Otro producto **activo** ya tiene ese nombre, sin contar mayúsculas ni espacios de más | «Ya existe un producto llamado mouse (código p4).» |
+| `categoria_invalida` | `categoria` | La categoría no tiene tarifa de IVA (`tarifa_iva/2`) | «La categoría ropa no existe. Use una de estas: general, medicamento, canasta, exento.» |
+| `precio_invalido` | `precio` | No es un entero mayor que 0 | «El precio debe ser un número entero de colones mayor que cero.» |
+| `stock_invalido` | `stock` | No es un entero mayor o igual que 0 | «El stock debe ser un número entero mayor o igual que cero.» |
+| `producto_en_kit` | `cod` | Al eliminar, el producto está dentro de un kit, directamente o dentro de otro kit (regla recursiva `kit_contiene/2`) | «No se puede eliminar laptop porque forma parte de estos kits: k1, k2.» |
 
 ## 4. Contrato de la API
 
