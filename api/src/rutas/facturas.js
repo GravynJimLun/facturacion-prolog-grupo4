@@ -163,6 +163,7 @@ function rutasFacturas({ db, motor }) {
 }
 
 // El cliente y todos los productos/kits de la factura tienen que existir.
+// Un producto desactivado cuenta como inexistente.
 // La tabla lineas no tiene llave foránea, así que se revisa aquí.
 async function revisarQueExistan(tx, { clienteId, lineas }) {
   const detalles = [];
@@ -173,7 +174,7 @@ async function revisarQueExistan(tx, { clienteId, lineas }) {
   const codigos = [...new Set(lineas.map((l) => l.productoCod))];
   if (codigos.length) {
     const { rows } = await tx.query(
-      `SELECT cod FROM productos WHERE cod = ANY($1::text[])
+      `SELECT cod FROM productos WHERE cod = ANY($1::text[]) AND activo
        UNION SELECT cod FROM kits WHERE cod = ANY($1::text[])`,
       [codigos],
     );
