@@ -5,6 +5,7 @@ import cors from 'cors';
 import { manejarErrores, rutaNoEncontrada } from './errores.js';
 import { rutasCatalogo } from './rutas/catalogo.js';
 import { rutasFacturas } from './rutas/facturas.js';
+import { rutasProductos } from './rutas/productos.js';
 import { rutasReportes } from './rutas/reportes.js';
 
 function crearApp({ db, motor, origenesCors, nombreMotor = 'falso' }) {
@@ -23,7 +24,8 @@ function crearApp({ db, motor, origenesCors, nombreMotor = 'falso' }) {
   // Para comprobar que el servidor está vivo y qué motor usa.
   app.get('/api/salud', (req, res) => res.json({ estado: 'ok', motor: nombreMotor }));
 
-  app.use('/api', rutasCatalogo({ db, motor }));
+  app.use('/api', rutasCatalogo({ db }));
+  app.use('/api/productos', rutasProductos({ db, motor }));
   app.use('/api/facturas', rutasFacturas({ db, motor }));
   app.use('/api/reportes', rutasReportes({ db }));
 

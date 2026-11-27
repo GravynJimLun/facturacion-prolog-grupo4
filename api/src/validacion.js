@@ -83,4 +83,54 @@ function validarNuevaFactura(cuerpo) {
   };
 }
 
-export { validarIdFactura, validarFiltrosFacturas, validarNuevaFactura };
+// ------------------------------------------------------------ productos
+// Aquí solo se revisa la FORMA: que los campos vengan y sean del tipo
+// correcto. Si el producto es válido (nombre repetido, categoría, precio
+// mayor que 0, stock...) lo decide el motor Prolog (contrato §3.7).
+const PATRON_COD = /^[a-z0-9_-]{1,20}$/;
+const MENSAJE_COD =
+  'de 1 a 20 caracteres: letras minúsculas, números, - o _ (por ejemplo "p8").';
+const esNumero = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_ID;
+
+// Código de producto que viene en la URL: /api/productos/{cod}
+function validarCodProducto(cod) {
+  if (typeof cod !== 'string' || !PATRON_COD.test(cod)) {
+    throw datosInvalidos([`El código del producto debe tener ${MENSAJE_COD}`]);
+  }
+  return cod;
+}
+
+// Cuerpo de POST /api/productos (conCod: true) y de PUT /api/productos/{cod}.
+function validarDatosProducto(cuerpo, { conCod }) {
+  if (typeof cuerpo !== 'object' || cuerpo === null || Array.isArray(cuerpo)) {
+    throw datosInvalidos(['El cuerpo debe ser un objeto JSON con nombre, categoria, precio y stock.']);
+  }
+
+  const detalles = [];
+  const { cod, nombre, categoria, precio, stock } = cuerpo;
+
+  if (conCod && (typeof cod !== 'string' || !PATRON_COD.test(cod))) {
+    detalles.push(`cod es obligatorio y debe tener ${MENSAJE_COD}`);
+  }
+  if (typeof nombre !== 'string' || nombre.length > 80) {
+    detalles.push('nombre es obligatorio y debe ser texto de máximo 80 caracteres.');
+  }
+  if (typeof categoria !== 'string' || categoria.length > 30) {
+    detalles.push('categoria es obligatoria y debe ser texto, por ejemplo "general".');
+  }
+  if (!esNumero(precio)) detalles.push('precio es obligatorio y debe ser un número.');
+  if (!esNumero(stock)) detalles.push('stock es obligatorio y debe ser un número.');
+
+  if (detalles.length) throw datosInvalidos(detalles);
+
+  const datos = { nombre: nombre.trim(), categoria, precio, stock };
+  return conCod ? { cod, ...datos } : datos;
+}
+
+export {
+  validarIdFactura,
+  validarFiltrosFacturas,
+  validarNuevaFactura,
+  validarCodProducto,
+  validarDatosProducto,
+};
