@@ -30,6 +30,7 @@ Es un sistema de facturación con cuatro piezas:
 1. Crear un proyecto en [Neon](https://neon.tech).
 2. Abrir **SQL Editor**, pegar `sql/facturacion_neon.sql` y pulsar **Run**.
 3. Después, en el mismo editor, correr `sql/002_detalle_lineas.sql`. Agrega las columnas donde se guarda el detalle calculado de cada línea.
+   Luego correr `sql/003_usuarios_productos.sql`. Crea la tabla de usuarios y la columna `activo` de los productos.
 4. Copiar `.env.example` como `.env` y poner ahí la cadena de conexión. **El archivo `.env` nunca se sube a GitHub.**
 
 ### 2. Motor de reglas (Prolog)
