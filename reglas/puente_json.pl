@@ -44,16 +44,21 @@ precios_kits_json(Entrada, Salida) :-
 
 % validar_producto_json(+EntradaJSON, -SalidaJSON)
 % Entrada: { operacion: "crear" | "actualizar",
-%            producto: { cod, nombre, categoria, precio, stock },
+%            producto: { cod?, nombre, categoria, precio, stock },
 %            productos, kits }      (catálogo actual, con los desactivados)
 % Salida:  { valido: true | false, errores: [ { codigo, campo, mensaje } ] }
 % Formato completo en docs/CONTRATO.md §3.7.
+%
+% "cod" es opcional: un producto nuevo todavía no tiene código, porque lo
+% genera Neon al guardarlo (sql/004). Entonces se usa '$nuevo', que nunca
+% choca con un código real (los códigos solo llevan a-z, 0-9, - y _).
 validar_producto_json(Entrada, Salida) :-
     leer_json(Entrada, D),
     cargar_catalogo(D),
     _{operacion: Op, producto: P} :< D,
     memberchk(Op, [crear, actualizar]),
-    _{cod: Cod, nombre: Nombre, categoria: Cat, precio: Precio, stock: Stock} :< P,
+    _{nombre: Nombre, categoria: Cat, precio: Precio, stock: Stock} :< P,
+    (   get_dict(cod, P, Cod) -> true ; Cod = '$nuevo' ),
     errores_producto(Op, producto(Cod, Nombre, Cat, Precio, Stock), Errores),
     validacion_a_json(Errores, Salida).
 

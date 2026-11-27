@@ -31,6 +31,7 @@ Es un sistema de facturación con cuatro piezas:
 2. Abrir **SQL Editor**, pegar `sql/facturacion_neon.sql` y pulsar **Run**.
 3. Después, en el mismo editor, correr `sql/002_detalle_lineas.sql`. Agrega las columnas donde se guarda el detalle calculado de cada línea.
    Luego correr `sql/003_usuarios_productos.sql`. Crea la tabla de usuarios y la columna `activo` de los productos.
+   Por último, correr `sql/004_codigo_productos.sql`. Hace que Neon genere el código de cada producto nuevo (p8, p9…).
 4. Copiar `.env.example` como `.env` y poner ahí la cadena de conexión. **El archivo `.env` nunca se sube a GitHub.**
 
 ### 2. Motor de reglas (Prolog)
@@ -86,7 +87,7 @@ El formato exacto de cada petición y respuesta está en [docs/CONTRATO.md](docs
 | POST | `/api/facturas` | Crea una factura pendiente con sus líneas | 201, 400 |
 | POST | `/api/facturas/{id}/emitir` | Calcula la factura con el motor Prolog y guarda el resultado. Una factura **rechazada** también responde 200 | 200, 400, 404, 409 |
 | GET | `/api/reportes` | Ventas totales, IVA por pagar, unidades por producto, producto más vendido y siguiente consecutivo (solo facturas emitidas) | 200 |
-| POST | `/api/productos` | Crea un producto. **El motor Prolog decide si es válido** | 201, 400, 409 |
+| POST | `/api/productos` | Crea un producto. **El motor Prolog decide si es válido** y Neon genera el código | 201, 400 |
 | PUT | `/api/productos/{cod}` | Actualiza un producto (el código no cambia) | 200, 400, 404 |
 | DELETE | `/api/productos/{cod}` | Desactiva un producto. No se puede si forma parte de un kit | 204, 404, 409 |
 

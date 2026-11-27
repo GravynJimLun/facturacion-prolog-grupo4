@@ -8,8 +8,11 @@ import * as motor from '../motor/index.js';
 import { productos as productosEjemplo, kits as kitsEjemplo } from '../motor/datos-ejemplo.js';
 
 // Base de datos falsa: responde solo las consultas que usan estas rutas.
-function crearDbFalsa() {
+// `secuencia` imita productos_cod_seq de sql/004: el INSERT sin código
+// recibe 'p' + el número siguiente.
+function crearDbFalsa({ secuencia = 7 } = {}) {
   const productos = productosEjemplo.map((p) => ({ ...p, activo: true }));
+  let ultimo = secuencia;
   const kits = kitsEjemplo.map((k) => ({ ...k, nombre: `kit_${k.cod}` }));
   const columnas = ({ cod, nombre, categoria, precio, stock }) => ({ cod, nombre, categoria, precio, stock });
 
@@ -27,7 +30,8 @@ function crearDbFalsa() {
       }
       if (texto.startsWith('SELECT') && texto.includes('FROM kits')) return { rows: kits };
       if (texto.startsWith('INSERT INTO productos')) {
-        const [cod, nombre, categoria, precio, stock] = params;
+        const [nombre, categoria, precio, stock] = params;
+        const cod = `p${++ultimo}`;
         if (productos.some((p) => p.cod === cod)) throw Object.assign(new Error('duplicado'), { code: '23505' });
         const fila = { cod, nombre, categoria, precio, stock, activo: true };
         productos.push(fila);
@@ -50,8 +54,8 @@ function crearDbFalsa() {
 }
 
 // Levanta la app en un puerto libre y devuelve una función para pedirle.
-async function conApp(fn) {
-  const db = crearDbFalsa();
+async function conApp(fn, opcionesDb) {
+  const db = crearDbFalsa(opcionesDb);
   const servidor = crearApp({ db, motor, origenesCors: [] }).listen(0);
   await new Promise((ok) => servidor.once('listening', ok));
   const base = `http://localhost:${servidor.address().port}/api/productos`;
@@ -70,7 +74,7 @@ async function conApp(fn) {
   }
 }
 
-const cafe = { cod: 'p8', nombre: 'cafe_molido', categoria: 'canasta', precio: 3500, stock: 40 };
+const cafe = { nombre: 'cafe_molido', categoria: 'canasta', precio: 3500, stock: 40 };
 
 test('GET: productos activos y kits, sin el campo activo', async () => {
   await conApp(async (pedir) => {
@@ -84,22 +88,44 @@ test('GET: productos activos y kits, sin el campo activo', async () => {
   });
 });
 
-test('POST: crea un producto válido', async () => {
+test('POST: crea un producto válido y el código lo genera la base', async () => {
   await conApp(async (pedir, db) => {
     const { status, cuerpo } = await pedir('POST', '', { ...cafe, nombre: '  cafe_molido ' });
     assert.equal(status, 201);
-    assert.deepEqual(cuerpo, { ...cafe, tipo: 'producto' });
+    assert.deepEqual(cuerpo, { cod: 'p8', ...cafe, tipo: 'producto' });
     assert.ok(db.productos.some((p) => p.cod === 'p8'));
+    assert.equal((await pedir('POST', '', { ...cafe, nombre: 'te_verde' })).cuerpo.cod, 'p9');
   });
+});
+
+test('POST: no se acepta un código en el cuerpo', async () => {
+  await conApp(async (pedir, db) => {
+    const { status, cuerpo } = await pedir('POST', '', { ...cafe, cod: 'p50' });
+    assert.equal(status, 400);
+    assert.deepEqual(cuerpo.detalles, ['No mande el código: el sistema lo genera al crear el producto.']);
+    assert.equal(db.productos.length, 7);
+  });
+});
+
+test('POST: si la secuencia choca con un código creado a mano, prueba el siguiente', async () => {
+  // La secuencia va en 6: el siguiente sería p7, que ya existe.
+  await conApp(
+    async (pedir) => {
+      const { status, cuerpo } = await pedir('POST', '', cafe);
+      assert.equal(status, 201);
+      assert.equal(cuerpo.cod, 'p8');
+    },
+    { secuencia: 6 },
+  );
 });
 
 test('POST: los errores del motor llegan con su campo', async () => {
   await conApp(async (pedir, db) => {
-    const { status, cuerpo } = await pedir('POST', '', { ...cafe, cod: 'p1', categoria: 'ropa', precio: 0 });
+    const { status, cuerpo } = await pedir('POST', '', { ...cafe, nombre: 'Mouse', categoria: 'ropa', precio: 0 });
     assert.equal(status, 400);
     assert.equal(cuerpo.error, 'Datos inválidos');
     assert.deepEqual(cuerpo.errores.map((e) => [e.codigo, e.campo]), [
-      ['codigo_duplicado', 'cod'],
+      ['nombre_duplicado', 'nombre'],
       ['categoria_invalida', 'categoria'],
       ['precio_invalido', 'precio'],
     ]);
@@ -110,9 +136,9 @@ test('POST: los errores del motor llegan con su campo', async () => {
 
 test('POST: la forma de los datos se revisa antes del motor', async () => {
   await conApp(async (pedir) => {
-    const { status, cuerpo } = await pedir('POST', '', { cod: 'P 8', nombre: 5, precio: '3500' });
+    const { status, cuerpo } = await pedir('POST', '', { nombre: 5, precio: '3500' });
     assert.equal(status, 400);
-    assert.equal(cuerpo.detalles.length, 5);
+    assert.equal(cuerpo.detalles.length, 4); // nombre, categoria, precio y stock
     assert.equal(cuerpo.errores, undefined);
   });
 });
@@ -129,11 +155,10 @@ test('PUT: actualiza sin chocar consigo mismo', async () => {
 
 test('PUT: no se puede cambiar el código ni editar uno que no existe', async () => {
   await conApp(async (pedir) => {
-    const cambiarCod = await pedir('PUT', '/p4', { ...cafe });
+    const cambiarCod = await pedir('PUT', '/p4', { ...cafe, cod: 'p8' });
     assert.equal(cambiarCod.status, 400);
     assert.deepEqual(cambiarCod.cuerpo.detalles, ['El código de un producto no se puede cambiar.']);
-    const { cod, ...datos } = cafe;
-    assert.equal((await pedir('PUT', '/p99', datos)).status, 404);
+    assert.equal((await pedir('PUT', '/p99', cafe)).status, 404);
   });
 });
 
@@ -147,16 +172,15 @@ test('DELETE: un producto que está en kits no se puede eliminar (409)', async (
   });
 });
 
-test('DELETE: desactiva el producto; su código sigue ocupado y su nombre se libera', async () => {
+test('DELETE: desactiva el producto y su nombre se puede volver a usar', async () => {
   await conApp(async (pedir, db) => {
     assert.equal((await pedir('DELETE', '/p1')).status, 204);
     assert.equal(db.productos.find((p) => p.cod === 'p1').activo, false); // no se borró
     assert.ok(!(await pedir('GET')).cuerpo.some((p) => p.cod === 'p1'));
     assert.equal((await pedir('DELETE', '/p1')).status, 404);
 
-    const mismoCodigo = await pedir('POST', '', { ...cafe, cod: 'p1' });
-    assert.deepEqual(mismoCodigo.cuerpo.errores.map((e) => e.codigo), ['codigo_duplicado']);
     const mismoNombre = await pedir('POST', '', { ...cafe, nombre: 'arroz_1kg' });
     assert.equal(mismoNombre.status, 201);
+    assert.equal(mismoNombre.cuerpo.cod, 'p8'); // código nuevo, no reusa p1
   });
 });

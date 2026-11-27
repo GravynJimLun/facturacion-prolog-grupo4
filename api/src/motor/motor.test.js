@@ -129,6 +129,14 @@ test("validarProducto: el nombre de un producto desactivado se puede reusar", as
   assert.deepEqual(r2.errores.map((e) => e.codigo), ["nombre_duplicado"]);
 });
 
+test("validarProducto: producto nuevo sin código (lo genera Neon)", async () => {
+  const { cod, ...sinCodigo } = nuevo().producto;
+  const r = await validarProducto({ ...nuevo(), producto: { ...sinCodigo, nombre: "mouse" } });
+  assert.deepEqual(r.errores.map((e) => e.codigo), ["nombre_duplicado"]);
+  const r2 = await validarProducto({ ...nuevo(), producto: sinCodigo });
+  assert.equal(r2.valido, true);
+});
+
 test("validarProducto: actualizar no choca consigo mismo", async () => {
   const r = await validarProducto({
     ...nuevo({ cod: "p4", nombre: "mouse", categoria: "general", precio: 9000 }),
