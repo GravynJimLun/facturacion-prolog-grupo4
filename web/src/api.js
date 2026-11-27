@@ -12,12 +12,15 @@ const URL_API = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replac
 const USAR_DATOS_DE_PRUEBA = import.meta.env.VITE_DATOS_DE_PRUEBA === 'true';
 
 // Error con un mensaje listo para mostrar y, si los hay, los detalles que
-// mandó el backend (por ejemplo, qué campo está mal).
+// mandó el backend (por ejemplo, qué campo está mal). `errores` solo viene
+// en el mantenimiento de productos: [{ codigo, campo, mensaje }] del motor
+// Prolog, para marcar cada campo del formulario (contrato §4.9).
 class ErrorApi extends Error {
-  constructor(mensaje, { status = 0, detalles = [] } = {}) {
+  constructor(mensaje, { status = 0, detalles = [], errores = [] } = {}) {
     super(mensaje);
     this.status = status;
     this.detalles = detalles;
+    this.errores = errores;
   }
 }
 
@@ -46,7 +49,7 @@ async function pedir(ruta, { metodo = 'GET', cuerpo } = {}) {
   if (!respuesta.ok) {
     throw new ErrorApi(
       datos?.error || MENSAJES_POR_STATUS[respuesta.status] || 'Ocurrió un error inesperado.',
-      { status: respuesta.status, detalles: datos?.detalles ?? [] },
+      { status: respuesta.status, detalles: datos?.detalles ?? [], errores: datos?.errores ?? [] },
     );
   }
   return datos;
@@ -65,6 +68,11 @@ const apiReal = {
   crearFactura: (factura) => pedir('/api/facturas', { metodo: 'POST', cuerpo: factura }),
   emitirFactura: (id) => pedir(`/api/facturas/${encodeURIComponent(id)}/emitir`, { metodo: 'POST' }),
   reportes: () => pedir('/api/reportes'),
+  // Mantenimiento de productos (contrato §4.9)
+  crearProducto: (producto) => pedir('/api/productos', { metodo: 'POST', cuerpo: producto }),
+  actualizarProducto: (cod, datos) =>
+    pedir(`/api/productos/${encodeURIComponent(cod)}`, { metodo: 'PUT', cuerpo: datos }),
+  eliminarProducto: (cod) => pedir(`/api/productos/${encodeURIComponent(cod)}`, { metodo: 'DELETE' }),
 };
 
 // ------------------------------------------------ API de datos de prueba
@@ -77,7 +85,43 @@ const fallar = (error) => new Promise((_, no) => setTimeout(() => no(error), 400
 // emitir las cambian, igual que el backend real. Al recargar se vuelve a
 // los 6 ejemplos (sus números son los de docs/VERIFICACION.md).
 const memoria = new Map(facturasDetalle.map((f) => [f.id, structuredClone(f)]));
-const nombreProducto = (cod) => productos.find((p) => p.cod === cod)?.nombre ?? cod;
+// El catálogo también vive en memoria, para poder crear, editar y eliminar.
+// Un producto eliminado se desactiva: su código sigue ocupado, igual que en Neon.
+const catalogo = structuredClone(productos);
+const desactivados = new Set();
+const nombreProducto = (cod) => catalogo.find((p) => p.cod === cod)?.nombre ?? cod;
+
+// Imita algunas reglas del motor Prolog (contrato §3.8). Las reglas
+// completas solo están en Prolog: esto es para probar la pantalla.
+function validarProductoDePrueba(producto, { crear }) {
+  const errores = [];
+  const agregar = (codigo, campo, mensaje) =>
+    errores.push({ codigo, campo, mensaje: `${mensaje} (modo de prueba)` });
+  if (crear && catalogo.some((p) => p.cod === producto.cod)) {
+    agregar('codigo_duplicado', 'cod', `Ya existe un producto o kit con el código ${producto.cod}.`);
+  }
+  if (!producto.nombre.trim()) agregar('nombre_vacio', 'nombre', 'El nombre del producto no puede estar vacío.');
+  if (!Number.isInteger(producto.precio) || producto.precio <= 0) {
+    agregar('precio_invalido', 'precio', 'El precio debe ser un número entero de colones mayor que cero.');
+  }
+  if (!Number.isInteger(producto.stock) || producto.stock < 0) {
+    agregar('stock_invalido', 'stock', 'El stock debe ser un número entero mayor o igual que cero.');
+  }
+  return errores;
+}
+
+// Como kit_contiene/2 en Prolog: el producto está en el kit o en un kit de adentro.
+const kitContiene = (kit, cod) =>
+  kit.componentes.some((c) => {
+    const sub = catalogo.find((k) => k.cod === c && k.tipo === 'kit');
+    return c === cod || (sub !== undefined && kitContiene(sub, cod));
+  });
+
+const rechazar = (status, mensaje, errores) =>
+  fallar(new ErrorApi(mensaje, { status, detalles: errores.map((e) => e.mensaje), errores }));
+const productoNoExiste = (cod) => fallar(new ErrorApi(`No existe el producto ${cod}`, { status: 404 }));
+const buscarActivo = (cod) =>
+  catalogo.find((p) => p.cod === cod && p.tipo === 'producto' && !desactivados.has(cod));
 const noExiste = (id) => new ErrorApi(`La factura ${id} no existe.`, { status: 404 });
 
 const resumenFactura = (f) => ({
@@ -93,7 +137,7 @@ const resumenFactura = (f) => ({
 });
 
 const apiDePrueba = {
-  productos: () => esperar(productos),
+  productos: () => esperar(catalogo.filter((p) => !desactivados.has(p.cod))),
   clientes: () => esperar(clientes),
   facturas: ({ estado, cliente } = {}) =>
     esperar(
@@ -160,6 +204,34 @@ const apiDePrueba = {
     return esperar({ ...resultado, id: f.id });
   },
   reportes: () => esperar(reportes),
+  crearProducto: (producto) => {
+    const errores = validarProductoDePrueba(producto, { crear: true });
+    if (errores.length) return rechazar(400, 'Datos inválidos', errores);
+    const nuevo = { ...producto, nombre: producto.nombre.trim(), tipo: 'producto' };
+    catalogo.splice(catalogo.filter((p) => p.tipo === 'producto').length, 0, nuevo); // antes de los kits
+    return esperar(nuevo);
+  },
+  actualizarProducto: (cod, datos) => {
+    const p = buscarActivo(cod);
+    if (!p) return productoNoExiste(cod);
+    const errores = validarProductoDePrueba({ cod, ...datos }, { crear: false });
+    if (errores.length) return rechazar(400, 'Datos inválidos', errores);
+    Object.assign(p, datos, { nombre: datos.nombre.trim() });
+    return esperar(p);
+  },
+  eliminarProducto: (cod) => {
+    if (!buscarActivo(cod)) return productoNoExiste(cod);
+    const kits = catalogo.filter((k) => k.tipo === 'kit' && kitContiene(k, cod)).map((k) => k.cod);
+    if (kits.length) {
+      return rechazar(409, 'No se puede eliminar el producto', [{
+        codigo: 'producto_en_kit',
+        campo: 'cod',
+        mensaje: `No se puede eliminar ${nombreProducto(cod)} porque forma parte de estos kits: ${kits.join(', ')}. (modo de prueba)`,
+      }]);
+    }
+    desactivados.add(cod);
+    return esperar(null);
+  },
 };
 
 const api = USAR_DATOS_DE_PRUEBA ? apiDePrueba : apiReal;

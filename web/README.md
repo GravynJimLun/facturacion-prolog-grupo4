@@ -31,10 +31,14 @@ Por defecto llama al backend en `http://localhost:3000`. Para cambiarlo, copie `
 | `#/facturas/{id}/emitir` | Emitir y mostrar el resultado | `paginas/Emitir.jsx` | #21 | Gravyn |
 | `#/facturas/{id}` | Detalle línea por línea | `paginas/Detalle.jsx` | #22 | Gravyn |
 | `#/reportes` | Reportes con gráfico | `paginas/Reportes.jsx` | #24 | Gravyn |
+| `#/productos` | Mantenimiento de productos: buscar, editar y eliminar (desactivar) | `paginas/Productos.jsx` | — | Gravyn |
+| `#/productos/nuevo` y `#/productos/{cod}/editar` | Formulario de producto. Muestra junto a cada campo los errores del motor Prolog | `paginas/ProductoFormulario.jsx` | — | Gravyn |
 
 Al guardar una factura nueva, la app lleva a `#/facturas/{id}/emitir`.
 
 En modo de prueba (`VITE_DATOS_DE_PRUEBA=true`), las facturas viven en memoria: se pueden crear y emitir, y al recargar se vuelve a los 6 ejemplos de `datos-de-prueba/facturas-detalle.json`. Como no hay motor, una factura nueva sale emitida con los montos de ejemplo de la factura 2.
+
+Los productos también viven en memoria: se pueden crear, editar y eliminar. Como no hay motor, el modo de prueba imita solo algunas reglas: código repetido, nombre vacío, precio, stock y producto dentro de un kit. Sus mensajes terminan en «(modo de prueba)».
 
 ## Estructura
 
