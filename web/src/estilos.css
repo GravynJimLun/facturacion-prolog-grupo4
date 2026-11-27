@@ -252,3 +252,41 @@ a.boton { display: inline-flex; align-items: center; text-decoration: none; }
 @media (forced-colors: active) {
   .barra { background: CanvasText; }
 }
+
+/* ======================================================================
+   Mantenimiento de productos
+   ====================================================================== */
+.titulo-con-accion {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 0.75rem; margin: 1.5rem 0 1rem;
+}
+.titulo-con-accion h1 { margin: 0; }
+
+.aviso-exito { background: var(--exito-fondo); color: var(--exito-texto); border: 1px solid var(--exito-texto); font-weight: 600; }
+.ayuda { margin: 0; font-size: 0.9rem; }
+input[readonly] { background: var(--fondo); color: var(--texto-suave); }
+
+/* Editar y Eliminar en cada fila */
+.botones-fila { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
+.boton-chico { padding: 0.35rem 0.75rem; }
+.boton-peligro:hover:not(:disabled) { background: var(--error-fondo); }
+.boton-secundario:hover:not(:disabled) { background: #e4ecf7; }
+.boton-peligro-lleno { background: var(--error-texto); color: #fff; }
+.boton-peligro-lleno:hover:not(:disabled) { background: #7f1d15; }
+
+/* Diálogo de confirmación (<dialog> con showModal) */
+.dialogo {
+  border: 1px solid var(--borde); border-radius: var(--radio); padding: 1.25rem 1.5rem;
+  max-width: min(460px, calc(100vw - 2rem)); color: var(--texto); background: var(--superficie);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.dialogo::backdrop { background: rgba(27, 31, 36, 0.45); }
+.dialogo h2 { margin: 0 0 0.75rem; }
+.dialogo-cuerpo p { margin: 0 0 0.5rem; }
+.dialogo-botones { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+
+@media (max-width: 700px) {
+  .tabla-apilable td.celda-acciones { justify-content: flex-end; }
+  .tabla-apilable td.celda-acciones .botones-fila { width: 100%; }
+  .tabla-apilable td.celda-acciones::before { content: none; }
+}
