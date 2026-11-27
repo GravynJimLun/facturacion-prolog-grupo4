@@ -3,7 +3,9 @@
 // coinciden con los de reglas/pruebas.pl y docs/VERIFICACION.md.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calcularFactura, preciosKits } from "./index.js";
+import {
+  calcularFactura, preciosKits, validarProducto, validarEliminarProducto,
+} from "./index.js";
 import { entradaFactura, productos, kits } from "./datos-ejemplo.js";
 
 const totales = (r) => [r.subtotal, r.iva, r.total];
@@ -87,4 +89,62 @@ test("entrada incompleta: lanza un error claro", async () => {
 
 test("preciosKits", async () => {
   assert.deepEqual(await preciosKits({ productos, kits }), { k1: 452675, k2: 453791.25 });
+});
+
+// --- Mantenimiento de productos (contrato §3.7) ----------------------
+const nuevo = (cambios = {}) => ({
+  operacion: "crear",
+  producto: { cod: "p8", nombre: "cafe_molido", categoria: "canasta", precio: 3500, stock: 40, ...cambios },
+  productos,
+  kits,
+});
+
+test("validarProducto: producto válido", async () => {
+  assert.deepEqual(await validarProducto(nuevo()), { valido: true, errores: [] });
+});
+
+test("validarProducto: varios errores con su campo", async () => {
+  const r = await validarProducto(nuevo({ cod: "p1", nombre: " ", categoria: "ropa", precio: 0, stock: -1 }));
+  assert.equal(r.valido, false);
+  assert.deepEqual(r.errores.map((e) => [e.codigo, e.campo]), [
+    ["codigo_duplicado", "cod"],
+    ["nombre_vacio", "nombre"],
+    ["categoria_invalida", "categoria"],
+    ["precio_invalido", "precio"],
+    ["stock_invalido", "stock"],
+  ]);
+});
+
+test("validarProducto: precio que llega como texto es inválido", async () => {
+  const r = await validarProducto(nuevo({ precio: "3500" }));
+  assert.deepEqual(r.errores.map((e) => e.codigo), ["precio_invalido"]);
+});
+
+test("validarProducto: el nombre de un producto desactivado se puede reusar", async () => {
+  const conMouseInactivo = productos.map((p) => (p.cod === "p4" ? { ...p, activo: false } : p));
+  const r = await validarProducto({ ...nuevo({ nombre: "Mouse" }), productos: conMouseInactivo });
+  assert.equal(r.valido, true);
+  // ...y la llamada siguiente no arrastra el producto desactivado.
+  const r2 = await validarProducto(nuevo({ nombre: "Mouse" }));
+  assert.deepEqual(r2.errores.map((e) => e.codigo), ["nombre_duplicado"]);
+});
+
+test("validarProducto: actualizar no choca consigo mismo", async () => {
+  const r = await validarProducto({
+    ...nuevo({ cod: "p4", nombre: "mouse", categoria: "general", precio: 9000 }),
+    operacion: "actualizar",
+  });
+  assert.equal(r.valido, true);
+});
+
+test("validarEliminarProducto: bloquea un producto que está en kits", async () => {
+  assert.deepEqual(await validarEliminarProducto({ cod: "p2", productos, kits }), {
+    valido: false,
+    errores: [{
+      codigo: "producto_en_kit",
+      campo: "cod",
+      mensaje: "No se puede eliminar laptop porque forma parte de estos kits: k1, k2.",
+    }],
+  });
+  assert.equal((await validarEliminarProducto({ cod: "p1", productos, kits })).valido, true);
 });

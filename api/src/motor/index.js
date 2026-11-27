@@ -70,3 +70,25 @@ export async function preciosKits(datos) {
   const swipl = await obtenerMotor();
   return consultar(swipl, "precios_kits_json", datos);
 }
+
+/**
+ * Valida un producto antes de crearlo o actualizarlo (contrato §3.7).
+ * Las reglas están en reglas/facturacion_reglas.pl §10.
+ * @param {object} datos { operacion: "crear"|"actualizar", producto, productos, kits }
+ *   `productos` es el catálogo COMPLETO, con los desactivados (`activo: false`).
+ * @returns {Promise<{ valido: boolean, errores: { codigo, campo, mensaje }[] }>}
+ */
+export async function validarProducto(datos) {
+  const swipl = await obtenerMotor();
+  return consultar(swipl, "validar_producto_json", datos);
+}
+
+/**
+ * Revisa si un producto se puede eliminar (desactivar). Contrato §3.7.
+ * @param {object} datos { cod, productos, kits }
+ * @returns {Promise<{ valido: boolean, errores: { codigo, campo, mensaje }[] }>}
+ */
+export async function validarEliminarProducto(datos) {
+  const swipl = await obtenerMotor();
+  return consultar(swipl, "validar_eliminar_json", datos);
+}

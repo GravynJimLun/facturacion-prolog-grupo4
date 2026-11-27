@@ -70,4 +70,33 @@ async function calcularFactura({ lineas, productos, kits }) {
   };
 }
 
-export { calcularFactura, preciosKits };
+// Mantenimiento de productos. El motor real revisa nombre, categoría,
+// precio y stock (reglas §10). El falso solo revisa lo que evita romper
+// los datos: que el código no exista al crear y que el producto no esté
+// en un kit al eliminar (solo kits directos, sin recursión).
+async function validarProducto({ operacion, producto, productos, kits }) {
+  const errores = [];
+  const ocupado = [...productos, ...kits].some((x) => x.cod === producto.cod);
+  if (operacion === 'crear' && ocupado) {
+    errores.push({
+      codigo: 'codigo_duplicado',
+      campo: 'cod',
+      mensaje: `Ya existe un producto o kit con el código ${producto.cod}. (motor falso)`,
+    });
+  }
+  return { valido: errores.length === 0, errores };
+}
+
+async function validarEliminarProducto({ cod, kits }) {
+  const enKits = kits.filter((k) => k.componentes.includes(cod)).map((k) => k.cod);
+  const errores = enKits.length
+    ? [{
+        codigo: 'producto_en_kit',
+        campo: 'cod',
+        mensaje: `No se puede eliminar ${cod} porque forma parte de estos kits: ${enKits.join(', ')}. (motor falso)`,
+      }]
+    : [];
+  return { valido: errores.length === 0, errores };
+}
+
+export { calcularFactura, preciosKits, validarProducto, validarEliminarProducto };
