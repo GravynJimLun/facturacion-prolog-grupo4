@@ -1,7 +1,10 @@
 // Crear (#/productos/nuevo) y editar (#/productos/{cod}/editar) un producto.
 //
-// Aquí solo se revisa la FORMA de los datos: que el código tenga un
-// formato válido y que precio y stock sean números. Las REGLAS (precio
+// El código de un producto nuevo no se escribe: lo genera Neon al guardar
+// (sql/004), así nunca se repite.
+//
+// Aquí solo se revisa la FORMA de los datos: que precio y stock sean
+// números. Las REGLAS (precio
 // mayor que 0, nombre repetido, categoría con tarifa de IVA, etc.) las
 // revisa el motor Prolog en el backend, y sus mensajes se muestran debajo
 // de cada campo (contrato §3.7 y §4.9).
@@ -13,16 +16,6 @@ import { Cargando, MensajeError } from '../componentes/Estados.jsx';
 import { etiqueta, nombreLegible } from '../formato.js';
 
 const CATEGORIAS = ['general', 'medicamento', 'canasta', 'exento'];
-const PATRON_COD = /^[a-z0-9_-]{1,20}$/;
-
-// Siguiente código libre del tipo p8, p9...
-function siguienteCodigo(catalogo) {
-  const numeros = catalogo
-    .map((p) => /^p(\d+)$/.exec(p.cod)?.[1])
-    .filter(Boolean)
-    .map(Number);
-  return `p${Math.max(0, ...numeros) + 1}`;
-}
 
 // La llave hace que React empiece de cero al pasar de un producto a otro.
 export default function ProductoFormulario() {
@@ -56,19 +49,12 @@ function CargarProducto({ cod }) {
     );
   }
 
-  return (
-    <Formulario
-      inicial={{ cod: siguienteCodigo(catalogo), nombre: '', categoria: 'general', precio: '', stock: '0' }}
-    />
-  );
+  return <Formulario inicial={{ nombre: '', categoria: 'general', precio: '', stock: '0' }} />;
 }
 
 // Errores de forma: { campo: mensaje }.
-function validarForma(v, editar) {
+function validarForma(v) {
   const errores = {};
-  if (!editar && !PATRON_COD.test(v.cod)) {
-    errores.cod = 'Use de 1 a 20 caracteres: letras minúsculas, números, - o _ (por ejemplo p8).';
-  }
   for (const campo of ['precio', 'stock']) {
     if (v[campo].trim() === '' || !Number.isFinite(Number(v[campo]))) errores[campo] = 'Escriba un número.';
   }
@@ -85,7 +71,7 @@ function Formulario({ inicial, editar = false }) {
   const [erroresMotor, setErroresMotor] = useState({});
   const resumen = useRef(null);
 
-  const erroresForma = validarForma(valores, editar);
+  const erroresForma = validarForma(valores);
   const errorDe = (campo) => (intentoEnviar && erroresForma[campo]) || erroresMotor[campo];
 
   // Si el servidor rechaza, el foco va al resumen de errores: así un
@@ -113,9 +99,7 @@ function Formulario({ inicial, editar = false }) {
       stock: Number(valores.stock),
     };
     try {
-      const guardado = editar
-        ? await api.actualizarProducto(valores.cod, datos)
-        : await api.crearProducto({ cod: valores.cod, ...datos });
+      const guardado = editar ? await api.actualizarProducto(valores.cod, datos) : await api.crearProducto(datos);
       const nombre = nombreLegible(guardado.nombre);
       navegar('/productos', {
         state: {
@@ -163,19 +147,17 @@ function Formulario({ inicial, editar = false }) {
           <div className="fila-campos">
             <div className="campo">
               <label htmlFor="producto-cod">Código</label>
-              {editar ? (
-                <>
-                  <input id="producto-cod" value={valores.cod} readOnly aria-describedby="ayuda-cod" />
-                  <p id="ayuda-cod" className="texto-suave ayuda">
-                    El código no se puede cambiar: las facturas lo usan.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <input {...propsCampo('cod')} autoComplete="off" spellCheck={false} />
-                  {errorCampo('cod')}
-                </>
-              )}
+              <input
+                id="producto-cod"
+                value={editar ? valores.cod : 'Se asigna al guardar'}
+                readOnly
+                aria-describedby="ayuda-cod"
+              />
+              <p id="ayuda-cod" className="texto-suave ayuda">
+                {editar
+                  ? 'El código no se puede cambiar: las facturas lo usan.'
+                  : 'El sistema le da el siguiente código libre (p8, p9…) y nunca lo repite.'}
+              </p>
             </div>
 
             <div className="campo">

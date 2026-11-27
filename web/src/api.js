@@ -93,13 +93,10 @@ const nombreProducto = (cod) => catalogo.find((p) => p.cod === cod)?.nombre ?? c
 
 // Imita algunas reglas del motor Prolog (contrato §3.8). Las reglas
 // completas solo están en Prolog: esto es para probar la pantalla.
-function validarProductoDePrueba(producto, { crear }) {
+function validarProductoDePrueba(producto) {
   const errores = [];
   const agregar = (codigo, campo, mensaje) =>
     errores.push({ codigo, campo, mensaje: `${mensaje} (modo de prueba)` });
-  if (crear && catalogo.some((p) => p.cod === producto.cod)) {
-    agregar('codigo_duplicado', 'cod', `Ya existe un producto o kit con el código ${producto.cod}.`);
-  }
   if (!producto.nombre.trim()) agregar('nombre_vacio', 'nombre', 'El nombre del producto no puede estar vacío.');
   if (!Number.isInteger(producto.precio) || producto.precio <= 0) {
     agregar('precio_invalido', 'precio', 'El precio debe ser un número entero de colones mayor que cero.');
@@ -205,16 +202,20 @@ const apiDePrueba = {
   },
   reportes: () => esperar(reportes),
   crearProducto: (producto) => {
-    const errores = validarProductoDePrueba(producto, { crear: true });
+    const errores = validarProductoDePrueba(producto);
     if (errores.length) return rechazar(400, 'Datos inválidos', errores);
-    const nuevo = { ...producto, nombre: producto.nombre.trim(), tipo: 'producto' };
+    // Como la secuencia de Neon (sql/004): el siguiente número, sin reusar
+    // los códigos de productos eliminados.
+    const numeros = catalogo.map((p) => Number(/^p(\d+)$/.exec(p.cod)?.[1] ?? 0));
+    const cod = `p${Math.max(0, ...numeros) + 1}`;
+    const nuevo = { cod, ...producto, nombre: producto.nombre.trim(), tipo: 'producto' };
     catalogo.splice(catalogo.filter((p) => p.tipo === 'producto').length, 0, nuevo); // antes de los kits
     return esperar(nuevo);
   },
   actualizarProducto: (cod, datos) => {
     const p = buscarActivo(cod);
     if (!p) return productoNoExiste(cod);
-    const errores = validarProductoDePrueba({ cod, ...datos }, { crear: false });
+    const errores = validarProductoDePrueba(datos);
     if (errores.length) return rechazar(400, 'Datos inválidos', errores);
     Object.assign(p, datos, { nombre: datos.nombre.trim() });
     return esperar(p);

@@ -62,26 +62,32 @@ function rutasProductos({ db, motor }) {
   });
 
   // ----------------------------------------------------------------- crear
+  // El código NO se manda: lo genera Neon con la secuencia de sql/004
+  // (p8, p9...). Así nunca se repite, aunque dos personas creen productos
+  // al mismo tiempo o el código sea de un producto desactivado.
   router.post('/', async (req, res) => {
-    const producto = validarDatosProducto(req.body, { conCod: true });
+    if (req.body?.cod !== undefined) {
+      throw datosInvalidos(['No mande el código: el sistema lo genera al crear el producto.']);
+    }
+    const producto = validarDatosProducto(req.body);
 
     const catalogo = await leerCatalogo(db, { incluirInactivos: true });
     exigirValido(await motor.validarProducto({ operacion: 'crear', producto, ...catalogo }));
 
-    try {
-      const { rows } = await db.query(
-        `INSERT INTO productos (cod, nombre, categoria, precio, stock)
-         VALUES ($1, $2, $3, $4, $5) RETURNING ${COLUMNAS}`,
-        [producto.cod, producto.nombre, producto.categoria, producto.precio, producto.stock],
-      );
-      res.status(201).json(aJson(rows[0]));
-    } catch (err) {
-      // Dos personas crearon el mismo código al mismo tiempo: el motor no
-      // lo vio, pero la llave primaria de Neon sí.
-      if (err.code === '23505') {
-        throw conflicto(`Ya existe un producto con el código ${producto.cod}.`);
+    // Si alguien creó a mano un código como p12 (por ejemplo, desde el SQL
+    // Editor), la secuencia puede llegar a él. Entonces la llave primaria lo
+    // rechaza y se prueba con el número siguiente.
+    for (let intento = 1; ; intento++) {
+      try {
+        const { rows } = await db.query(
+          `INSERT INTO productos (nombre, categoria, precio, stock)
+           VALUES ($1, $2, $3, $4) RETURNING ${COLUMNAS}`,
+          [producto.nombre, producto.categoria, producto.precio, producto.stock],
+        );
+        return res.status(201).json(aJson(rows[0]));
+      } catch (err) {
+        if (err.code !== '23505' || intento === 5) throw err;
       }
-      throw err;
     }
   });
 
@@ -93,7 +99,7 @@ function rutasProductos({ db, motor }) {
     if (req.body?.cod !== undefined && req.body.cod !== cod) {
       throw datosInvalidos(['El código de un producto no se puede cambiar.']);
     }
-    const datos = validarDatosProducto(req.body, { conCod: false });
+    const datos = validarDatosProducto(req.body);
 
     const catalogo = await leerCatalogo(db, { incluirInactivos: true });
     exigirActivo(catalogo, cod);
