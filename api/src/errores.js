@@ -1,18 +1,21 @@
 // Manejo de errores con el formato del contrato (§4.1):
 //   { "error": "Mensaje", "detalles": ["...", "..."] }   (detalles es opcional)
+// Los errores del motor en el mantenimiento de productos traen además
+// "errores": [{ codigo, campo, mensaje }], para marcar cada campo.
 
 // Error "esperado" con su código HTTP: 400, 404, 409...
 class ErrorHttp extends Error {
-  constructor(status, mensaje, detalles) {
+  constructor(status, mensaje, detalles, errores) {
     super(mensaje);
     this.status = status;
     this.detalles = detalles;
+    this.errores = errores;
   }
 }
 
-const datosInvalidos = (detalles) => new ErrorHttp(400, 'Datos inválidos', detalles);
+const datosInvalidos = (detalles, errores) => new ErrorHttp(400, 'Datos inválidos', detalles, errores);
 const noEncontrado = (mensaje) => new ErrorHttp(404, mensaje);
-const conflicto = (mensaje) => new ErrorHttp(409, mensaje);
+const conflicto = (mensaje, detalles, errores) => new ErrorHttp(409, mensaje, detalles, errores);
 
 // Para rutas que no existen.
 function rutaNoEncontrada(req, res) {
@@ -27,6 +30,7 @@ function manejarErrores(err, req, res, next) {
   if (err instanceof ErrorHttp) {
     const cuerpo = { error: err.message };
     if (err.detalles?.length) cuerpo.detalles = err.detalles;
+    if (err.errores?.length) cuerpo.errores = err.errores;
     return res.status(err.status).json(cuerpo);
   }
 

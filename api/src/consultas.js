@@ -4,10 +4,18 @@
 // Catálogo completo: productos y kits (con la lista de componentes).
 // El motor lo necesita entero, porque un kit usa los precios y el stock de
 // sus componentes (contrato §3.1).
-async function leerCatalogo(db, { bloquearStock = false } = {}) {
+// Normalmente solo trae los productos ACTIVOS: uno desactivado ya no se
+// vende. El mantenimiento usa incluirInactivos, porque el código de un
+// producto desactivado sigue ocupado (contrato §3.7); cada producto trae
+// entonces el campo activo.
+async function leerCatalogo(db, { bloquearStock = false, incluirInactivos = false } = {}) {
   const productos = await db.query(
-    `SELECT cod, nombre, categoria, precio, stock FROM productos ORDER BY cod
+    `SELECT cod, nombre, categoria, precio, stock${incluirInactivos ? ', activo' : ''}
+       FROM productos
+      WHERE $1::boolean OR activo
+      ORDER BY cod
      ${bloquearStock ? 'FOR UPDATE' : ''}`,
+    [incluirInactivos],
   );
   const kits = await db.query(
     `SELECT k.cod, k.nombre,

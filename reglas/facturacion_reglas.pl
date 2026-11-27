@@ -12,6 +12,9 @@
 % Los hechos son dinámicos porque el backend los reemplaza en cada
 % cálculo con los datos que lee de Neon.
 :- dynamic producto/5, kit/2, cliente/4, factura/3, linea/3.
+% producto_inactivo(Cod): el producto fue "eliminado" (desactivado) en
+% el mantenimiento. Solo lo usan las validaciones de la sección 10.
+:- dynamic producto_inactivo/1.
 
 % ---------------------------------------------------------------------
 % 1. Tarifas de IVA por categoría
@@ -305,3 +308,99 @@ siguiente_consecutivo(N) :-
     ->  N is Max + 1
     ;   N = 1
     ).
+
+% ---------------------------------------------------------------------
+% 10. Mantenimiento de productos: validaciones al crear, actualizar y
+%     eliminar
+% ---------------------------------------------------------------------
+% El backend no decide si un producto es válido: se lo pregunta al
+% motor, igual que con las facturas. El producto que manda el usuario
+% todavía NO está en los hechos; llega como término:
+%   Producto  = producto(Cod, Nombre, Categoria, Precio, Stock)
+%   Operacion = crear | actualizar
+%
+% error_producto(Operacion, Producto, error(Codigo, Campo, Mensaje))
+%   Campo es el dato del formulario que hay que corregir (cod, nombre,
+%   categoria, precio o stock), para que el front end lo marque.
+%   Los códigos están en docs/CONTRATO.md §3.8.
+%
+% Ninguna cláusula usa corte (!): un corte dentro de error_producto
+% descartaría las cláusulas siguientes y se perderían errores. Donde
+% basta la primera coincidencia se usa once/1.
+
+% Código repetido (solo al crear). Se compara con productos y kits,
+% también con los desactivados, porque el código es la llave primaria.
+error_producto(crear, producto(Cod, _, _, _, _), error(codigo_duplicado, cod, M)) :-
+    existe_item(Cod),
+    format(atom(M), 'Ya existe un producto o kit con el código ~w.', [Cod]).
+
+% Nombre vacío o solo con espacios.
+error_producto(_, producto(_, Nombre, _, _, _), error(nombre_vacio, nombre, M)) :-
+    nombre_normalizado(Nombre, ''),
+    M = 'El nombre del producto no puede estar vacío.'.
+
+% Otro producto activo con el mismo nombre, sin importar mayúsculas ni
+% espacios de más. Al actualizar, el producto no choca consigo mismo.
+error_producto(_, producto(Cod, Nombre, _, _, _), error(nombre_duplicado, nombre, M)) :-
+    nombre_normalizado(Nombre, Normal),
+    Normal \== '',
+    once(( producto(Otro, NombreOtro, _, _, _),
+           Otro \== Cod,
+           \+ producto_inactivo(Otro),
+           nombre_normalizado(NombreOtro, Normal) )),
+    format(atom(M), 'Ya existe un producto llamado ~w (código ~w).', [NombreOtro, Otro]).
+
+% La categoría tiene que tener una tarifa de IVA (sección 1). Así hay
+% una sola lista de categorías válidas: las de tarifa_iva/2.
+error_producto(_, producto(_, _, Cat, _, _), error(categoria_invalida, categoria, M)) :-
+    \+ tarifa_iva(Cat, _),
+    findall(C, tarifa_iva(C, _), Categorias),
+    atomic_list_concat(Categorias, ', ', Lista),
+    format(atom(M), 'La categoría ~w no existe. Use una de estas: ~w.', [Cat, Lista]).
+
+% Precio: colones enteros, mayor que cero (como en la tabla de Neon).
+error_producto(_, producto(_, _, _, Precio, _), error(precio_invalido, precio, M)) :-
+    \+ ( integer(Precio), Precio > 0 ),
+    M = 'El precio debe ser un número entero de colones mayor que cero.'.
+
+% Stock: entero, cero o más.
+error_producto(_, producto(_, _, _, _, Stock), error(stock_invalido, stock, M)) :-
+    \+ ( integer(Stock), Stock >= 0 ),
+    M = 'El stock debe ser un número entero mayor o igual que cero.'.
+
+% errores_producto(Operacion, Producto, Errores): lista completa (vacía
+% si el producto es válido).
+errores_producto(Op, Producto, Errores) :-
+    findall(E, error_producto(Op, Producto, E), Errores).
+
+% nombre_normalizado(Nombre, Normal): sin espacios de más y en
+% minúsculas, para comparar nombres. Falla si Nombre no es texto.
+nombre_normalizado(Nombre, Normal) :-
+    atom(Nombre),
+    normalize_space(atom(SinEspacios), Nombre),
+    downcase_atom(SinEspacios, Normal).
+
+% --- Eliminar --------------------------------------------------------
+% kit_contiene(Kit, Item): Item está dentro de Kit, directamente o
+% dentro de otro kit que Kit contiene. Es recursiva, como precio_item:
+% p2 está en k1, y k1 está en k2, así que k2 también contiene a p2.
+kit_contiene(Kit, Item) :-
+    kit(Kit, Componentes),
+    member(Item, Componentes).
+kit_contiene(Kit, Item) :-
+    kit(Kit, Componentes),
+    member(Sub, Componentes),
+    kit_contiene(Sub, Item).
+
+% error_eliminar(Cod, error(Codigo, Campo, Mensaje))
+% No se puede eliminar un producto que forma parte de un kit: el kit se
+% quedaría sin precio y no se podría vender.
+error_eliminar(Cod, error(producto_en_kit, cod, M)) :-
+    setof(Kit, kit_contiene(Kit, Cod), Kits),
+    nombre_item(Cod, Nombre),
+    atomic_list_concat(Kits, ', ', Lista),
+    format(atom(M), 'No se puede eliminar ~w porque forma parte de estos kits: ~w.',
+           [Nombre, Lista]).
+
+errores_eliminar(Cod, Errores) :-
+    findall(E, error_eliminar(Cod, E), Errores).

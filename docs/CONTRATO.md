@@ -145,7 +145,7 @@ Recibe `{ productos, kits }` (el mismo formato de la §3.1) y devuelve el precio
 
 ### 3.5 Motor falso
 
-Mientras el motor real no esté listo, Armando usa `api/src/motor-falso.js`. Exporta las mismas dos funciones y devuelve los JSON de ejemplo de este documento.
+Mientras el motor real no esté listo, Armando usa `api/src/motor-falso.js`. Exporta las mismas cuatro funciones y devuelve los JSON de ejemplo de este documento.
 
 El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real`. Cuando Gravyn entregue `api/src/motor/`, basta con cambiar la variable.
 
@@ -157,6 +157,52 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 - En Prolog, todo el resultado sale de `resultado_factura(Id, resultado(Estado, Subtotal, Iva, Total, Lineas, ConsumoStock, Errores))`. El módulo JS lo traduce al JSON de la §3.1: `null` pasa a `null`, y un `productoCod` igual a `ninguno` se omite.
 - Las facturas no se mezclan aunque lleguen dos peticiones a la vez. Cada llamada carga sus hechos y consulta en un solo paso síncrono (`once()`), y JavaScript no ejecuta otra llamada en medio. Por eso no hace falta una cola. **Regla para quien toque `api/src/motor/`:** no poner ningún `await` entre la carga de los hechos y la consulta.
 - Los datos entran y salen como texto JSON a través de `reglas/puente_json.pl` (`calcular_factura_json/2` y `precios_kits_json/2`).
+
+### 3.7 Mantenimiento de productos: `validarProducto(datos)` y `validarEliminarProducto(datos)`
+
+El backend **no decide** si un producto es válido: antes de guardar en Neon le pregunta al motor. Las reglas están en `reglas/facturacion_reglas.pl` §10.
+
+**`validarProducto`.** Se llama antes de `POST /api/productos` (`operacion: "crear"`) y de `PUT /api/productos/{cod}` (`operacion: "actualizar"`):
+
+```json
+{
+  "operacion": "crear",
+  "producto":  { "cod": "p8", "nombre": "cafe_molido", "categoria": "canasta", "precio": 3500, "stock": 40 },
+  "productos": [ { "cod": "p4", "nombre": "mouse", "categoria": "general", "precio": 8500, "stock": 80, "activo": false } ],
+  "kits":      [ { "cod": "k1", "componentes": ["p2", "p4", "p7"] } ]
+}
+```
+
+- `productos` es el catálogo **completo, con los desactivados**. Un código desactivado sigue ocupado, porque es la llave primaria. En cambio, su nombre se puede volver a usar.
+- `activo` es opcional. Si no viene, el producto cuenta como activo.
+
+**`validarEliminarProducto`.** Se llama antes de `DELETE /api/productos/{cod}`, con la entrada `{ "cod": "p2", "productos": [...], "kits": [...] }`.
+
+**Las dos funciones devuelven lo mismo:**
+
+```json
+{
+  "valido": false,
+  "errores": [
+    { "codigo": "producto_en_kit", "campo": "cod",
+      "mensaje": "No se puede eliminar laptop porque forma parte de estos kits: k1, k2." }
+  ]
+}
+```
+
+`campo` es el dato del formulario que hay que corregir. El front lo usa para marcar ese campo. Igual que con las facturas, el motor devuelve **todos** los errores juntos.
+
+### 3.8 Códigos de error de productos
+
+| `codigo` | `campo` | Cuándo | Ejemplo de `mensaje` |
+|---|---|---|---|
+| `codigo_duplicado` | `cod` | Al crear, el código ya es de un producto (aunque esté desactivado) o de un kit | «Ya existe un producto o kit con el código p1.» |
+| `nombre_vacio` | `nombre` | El nombre está vacío o tiene solo espacios | «El nombre del producto no puede estar vacío.» |
+| `nombre_duplicado` | `nombre` | Otro producto **activo** ya tiene ese nombre, sin contar mayúsculas ni espacios de más | «Ya existe un producto llamado mouse (código p4).» |
+| `categoria_invalida` | `categoria` | La categoría no tiene tarifa de IVA (`tarifa_iva/2`) | «La categoría ropa no existe. Use una de estas: general, medicamento, canasta, exento.» |
+| `precio_invalido` | `precio` | No es un entero mayor que 0 | «El precio debe ser un número entero de colones mayor que cero.» |
+| `stock_invalido` | `stock` | No es un entero mayor o igual que 0 | «El stock debe ser un número entero mayor o igual que cero.» |
+| `producto_en_kit` | `cod` | Al eliminar, el producto está dentro de un kit, directamente o dentro de otro kit (regla recursiva `kit_contiene/2`) | «No se puede eliminar laptop porque forma parte de estos kits: k1, k2.» |
 
 ## 4. Contrato de la API
 
@@ -171,7 +217,7 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 { "error": "Datos inválidos", "detalles": ["La cantidad de la línea 2 debe ser un entero mayor que 0."] }
 ```
 
-`detalles` es opcional.
+`detalles` es opcional. Cuando el error viene del motor en el mantenimiento de productos (§4.9), la respuesta trae además `errores: [{ codigo, campo, mensaje }]`, para que el front marque cada campo.
 
 ### 4.2 Endpoints
 
@@ -184,6 +230,9 @@ El backend elige el motor con la variable de entorno `MOTOR=falso` o `MOTOR=real
 | `POST /api/facturas` | 201, 400 | Crea la factura en estado `pendiente` (§4.6) |
 | `POST /api/facturas/{id}/emitir` | 200, 404, 409 | Llama al motor y guarda el resultado (§4.7) |
 | `GET /api/reportes` | 200 | §4.8 |
+| `POST /api/productos` | 201, 400, 409 | Crea un producto, si el motor lo aprueba (§4.9) |
+| `PUT /api/productos/{cod}` | 200, 400, 404 | Actualiza un producto. El código no cambia (§4.9) |
+| `DELETE /api/productos/{cod}` | 204, 404, 409 | Desactiva un producto (§4.9) |
 
 ### 4.3 `GET /api/productos`
 
@@ -270,6 +319,46 @@ Respuesta: **201** con el mismo formato de §4.5 (estado `pendiente`) y la cabec
 - Solo cuentan las facturas **emitidas**. Las unidades se agrupan por el código de la línea, así que un kit cuenta como kit.
 - Se calcula con SQL sobre Neon, sin el motor.
 - Los reportes del motor Prolog (#8) deben dar **los mismos números** con los datos de ejemplo. Es una buena verificación cruzada para el informe.
+
+### 4.9 Mantenimiento de productos: `POST`, `PUT` y `DELETE /api/productos`
+
+**Cada petición pasa por tres capas:**
+
+1. `validacion.js` revisa la **forma**: que vengan los campos, el tipo de cada uno y el formato del código (1 a 20 caracteres: minúsculas, números, `-` o `_`).
+2. El **motor Prolog** revisa las **reglas** (§3.7): duplicados, categoría, precio, stock y kits.
+3. **Neon** guarda el producto con una consulta con parámetros. La llave primaria y los `CHECK` de la tabla quedan como última defensa.
+
+**`POST /api/productos`** recibe `{ "cod": "p8", "nombre": "cafe_molido", "categoria": "canasta", "precio": 3500, "stock": 40 }`.
+- **201:** el producto creado, con el formato de §4.3.
+- **400:** el motor lo rechazó:
+
+```json
+{
+  "error": "Datos inválidos",
+  "detalles": ["Ya existe un producto o kit con el código p1.", "La categoría ropa no existe. Use una de estas: general, medicamento, canasta, exento."],
+  "errores": [
+    { "codigo": "codigo_duplicado",   "campo": "cod",       "mensaje": "Ya existe un producto o kit con el código p1." },
+    { "codigo": "categoria_invalida", "campo": "categoria", "mensaje": "La categoría ropa no existe. Use una de estas: general, medicamento, canasta, exento." }
+  ]
+}
+```
+
+- **409:** otra persona creó el mismo código al mismo tiempo.
+
+**`PUT /api/productos/{cod}`** recibe `{ nombre, categoria, precio, stock }`. Se mandan todos los campos.
+- El código **no se puede cambiar**, porque las facturas viejas lo usan. Si el cuerpo trae un `cod` distinto, responde 400.
+- 404 si el producto no existe o está desactivado.
+
+**`DELETE /api/productos/{cod}`** **desactiva** el producto: no borra la fila.
+- **204:** el producto se desactivó.
+- **404:** el producto no existe o ya estaba desactivado.
+- **409:** el motor no permite eliminarlo, con el mismo formato de `detalles` y `errores` (por ejemplo, `producto_en_kit`).
+
+**Qué pasa con un producto desactivado:**
+- Desaparece de `GET /api/productos`.
+- Ya no se puede poner en una factura nueva.
+- Una factura pendiente que ya lo tenía se rechaza al emitir, con `producto_inexistente`.
+- Las facturas viejas siguen mostrando su nombre.
 
 ## 5. Cambio en la base de datos (Armando)
 

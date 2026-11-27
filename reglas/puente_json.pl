@@ -42,6 +42,30 @@ precios_kits_json(Entrada, Salida) :-
     dict_create(Dict, _, Pares),
     atom_json_dict(Salida, Dict, [width(0)]).
 
+% validar_producto_json(+EntradaJSON, -SalidaJSON)
+% Entrada: { operacion: "crear" | "actualizar",
+%            producto: { cod, nombre, categoria, precio, stock },
+%            productos, kits }      (catálogo actual, con los desactivados)
+% Salida:  { valido: true | false, errores: [ { codigo, campo, mensaje } ] }
+% Formato completo en docs/CONTRATO.md §3.7.
+validar_producto_json(Entrada, Salida) :-
+    leer_json(Entrada, D),
+    cargar_catalogo(D),
+    _{operacion: Op, producto: P} :< D,
+    memberchk(Op, [crear, actualizar]),
+    _{cod: Cod, nombre: Nombre, categoria: Cat, precio: Precio, stock: Stock} :< P,
+    errores_producto(Op, producto(Cod, Nombre, Cat, Precio, Stock), Errores),
+    validacion_a_json(Errores, Salida).
+
+% validar_eliminar_json(+EntradaJSON, -SalidaJSON)
+% Entrada: { cod, productos, kits }. Salida: igual que validar_producto_json.
+validar_eliminar_json(Entrada, Salida) :-
+    leer_json(Entrada, D),
+    cargar_catalogo(D),
+    get_dict(cod, D, Cod),
+    errores_eliminar(Cod, Errores),
+    validacion_a_json(Errores, Salida).
+
 % Los textos JSON se leen como átomos (p1, contado, oro…), que es lo
 % que esperan las reglas.
 leer_json(Texto, Dict) :-
@@ -53,6 +77,7 @@ leer_json(Texto, Dict) :-
 
 limpiar_hechos :-
     retractall(producto(_, _, _, _, _)),
+    retractall(producto_inactivo(_)),
     retractall(kit(_, _)),
     retractall(cliente(_, _, _, _)),
     retractall(factura(_, _, _)),
@@ -65,7 +90,12 @@ cargar_catalogo(D) :-
     get_dict(productos, D, Productos),
     forall(member(P, Productos),
            ( _{cod: Cod, nombre: Nombre, categoria: Cat, precio: Precio, stock: Stock} :< P,
-             assertz(producto(Cod, Nombre, Cat, Precio, Stock)) )),
+             assertz(producto(Cod, Nombre, Cat, Precio, Stock)),
+             % "activo" es opcional: solo lo manda el mantenimiento de productos.
+             (   get_dict(activo, P, false)
+             ->  assertz(producto_inactivo(Cod))
+             ;   true
+             ) )),
     get_dict(kits, D, Kits),
     forall(member(K, Kits),
            ( _{cod: Cod, componentes: Componentes} :< K,
@@ -103,3 +133,13 @@ consumo_a_dict(Producto-Unidades, _{productoCod: Producto, cantidad: Unidades}).
 error_a_dict(error(Codigo, ninguno, Mensaje), _{codigo: Codigo, mensaje: Mensaje}) :- !.
 error_a_dict(error(Codigo, Producto, Mensaje),
              _{codigo: Codigo, productoCod: Producto, mensaje: Mensaje}).
+
+% Errores de validación de productos. Todos llevan el campo del
+% formulario que hay que corregir.
+validacion_a_json(Errores, Salida) :-
+    (   Errores == [] -> Valido = true ; Valido = false ),
+    maplist(error_campo_a_dict, Errores, ErroresD),
+    atom_json_dict(Salida, _{valido: Valido, errores: ErroresD}, [width(0)]).
+
+error_campo_a_dict(error(Codigo, Campo, Mensaje),
+                   _{codigo: Codigo, campo: Campo, mensaje: Mensaje}).

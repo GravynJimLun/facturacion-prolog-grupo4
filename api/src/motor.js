@@ -1,7 +1,8 @@
 // Elige el motor según la variable de entorno MOTOR (docs/CONTRATO.md §3.5):
 //   MOTOR=falso  -> api/src/motor-falso.js (por defecto)
 //   MOTOR=real   -> api/src/motor/index.js (motor Prolog con swipl-wasm, de Gravyn)
-// Los dos exportan las mismas funciones: calcularFactura y preciosKits.
+// Los dos exportan las mismas funciones: calcularFactura, preciosKits,
+// validarProducto y validarEliminarProducto.
 
 async function cargarMotor(tipo) {
   if (tipo === 'real') {

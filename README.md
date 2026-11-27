@@ -86,6 +86,9 @@ El formato exacto de cada petición y respuesta está en [docs/CONTRATO.md](docs
 | POST | `/api/facturas` | Crea una factura pendiente con sus líneas | 201, 400 |
 | POST | `/api/facturas/{id}/emitir` | Calcula la factura con el motor Prolog y guarda el resultado. Una factura **rechazada** también responde 200 | 200, 400, 404, 409 |
 | GET | `/api/reportes` | Ventas totales, IVA por pagar, unidades por producto, producto más vendido y siguiente consecutivo (solo facturas emitidas) | 200 |
+| POST | `/api/productos` | Crea un producto. **El motor Prolog decide si es válido** | 201, 400, 409 |
+| PUT | `/api/productos/{cod}` | Actualiza un producto (el código no cambia) | 200, 400, 404 |
+| DELETE | `/api/productos/{cod}` | Desactiva un producto. No se puede si forma parte de un kit | 204, 404, 409 |
 
 Todos los errores tienen el mismo formato: `{ "error": "Datos inválidos", "detalles": ["..."] }`. Un 500 solo aparece si hay un fallo real (por ejemplo, Neon no responde).
 

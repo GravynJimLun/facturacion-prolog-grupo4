@@ -7,12 +7,15 @@ import Historial from './paginas/Historial.jsx';
 import Emitir from './paginas/Emitir.jsx';
 import Detalle from './paginas/Detalle.jsx';
 import Reportes from './paginas/Reportes.jsx';
+import Productos from './paginas/Productos.jsx';
+import ProductoFormulario from './paginas/ProductoFormulario.jsx';
 
 const ENLACES = [
   { a: '/catalogo', texto: 'Catálogo' },
   { a: '/nueva', texto: 'Nueva factura' },
   { a: '/historial', texto: 'Historial' },
   { a: '/reportes', texto: 'Reportes' },
+  { a: '/productos', texto: 'Productos' },
 ];
 
 export default function App() {
@@ -51,6 +54,9 @@ export default function App() {
           <Route path="/facturas/:id" element={<Detalle />} />
           <Route path="/facturas/:id/emitir" element={<Emitir />} />
           <Route path="/reportes" element={<Reportes />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/productos/nuevo" element={<ProductoFormulario />} />
+          <Route path="/productos/:cod/editar" element={<ProductoFormulario />} />
           <Route path="*" element={<p>Esta página no existe.</p>} />
         </Routes>
       </main>
